@@ -1,0 +1,25 @@
+[package]
+name = "mga"
+version = "0.1.0"
+authors = ["eldrid01 <matthew.d.eldridge@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.38"
+csv = "1.1.5"
+env_logger = "0.8.2"
+flate2 = "1.0.20"
+log = "0.4.14"
+rand = "0.8.3"
+serde = { version = "1.0.123", features = ["derive"] }
+structopt = "0.3.21"
+
+[[bin]]
+name = "sample-fastq"
+path = "src/bin/sample_fastq.rs"
+
+[[bin]]
+name = "trim-and-split-fastq"
+path = "src/bin/trim_and_split_fastq.rs"
