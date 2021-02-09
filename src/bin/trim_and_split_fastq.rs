@@ -71,7 +71,7 @@ fn trim_and_split(
     let mut filtered_count = 0;
 
     let mut output_file_count = 1;
-    let output_fastq_file = format!("{}.{}.fq.gz", output_prefix, output_file_count);
+    let output_fastq_file = format!("{}.{}.fq", output_prefix, output_file_count);
     info!("Creating {}", output_fastq_file);
     let output_fastq_path = Some(PathBuf::from(output_fastq_file));
     let mut fastq_writer = create_fastq_writer(&output_fastq_path)?;
@@ -90,7 +90,7 @@ fn trim_and_split(
             if chunk_count > 0 && chunk_count % chunk_size == 0 {
                 fastq_writer.flush()?;
                 output_file_count += 1;
-                let output_fastq_file = format!("{}.{}.fq.gz", output_prefix, output_file_count);
+                let output_fastq_file = format!("{}.{}.fq", output_prefix, output_file_count);
                 info!("Creating {}", output_fastq_file);
                 let output_fastq_path = Some(PathBuf::from(output_fastq_file));
                 fastq_writer = create_fastq_writer(&output_fastq_path)?;
