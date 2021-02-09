@@ -6,6 +6,7 @@ def defaults = [
     chunkSize: 5000000,
     trimStart: 11,
     trimLength: 36,
+    bowtieIndexDir: "bowtie_indexes",
 ]
 
 // set paramters to default settings
@@ -15,6 +16,7 @@ params.sampleSize = defaults.sampleSize
 params.chunkSize = defaults.chunkSize
 params.trimStart = defaults.trimStart
 params.trimLength = defaults.trimLength
+params.bowtieIndexDir = defaults.bowtieIndexDir
 
 //print usage
 if (params.help) {
@@ -29,10 +31,11 @@ Usage:
 Options:
     --help                            Show this message and exit
     --input                           Sample sheet CSV file containing ID, Fastq (file path/pattern) and Species columns (default: ${defaults.input})
-    --sample-size SAMPLE_SIZE         Number of sequences to sample for each sample/dataset (default: ${defaults.sampleSize})
-    --chunk-size CHUNK_SIZE           Number of sequences for each chunk in batch processing of sampled sequences (default: ${defaults.chunkSize})
-    --trim-start TRIM_START           The position at which the trimmed sequence starts, all bases before this position are trimmed (default: ${defaults.trimStart})
-    --trim-length TRIM_LENGTH         The maximum length of the trimmed sequence (default: ${defaults.trimLength})
+    --sample-size INTEGER             Number of sequences to sample for each sample/dataset (default: ${defaults.sampleSize})
+    --chunk-size INTEGER              Number of sequences for each chunk in batch processing of sampled sequences (default: ${defaults.chunkSize})
+    --trim-start INTEGER              The position at which the trimmed sequence starts, all bases before this position are trimmed (default: ${defaults.trimStart})
+    --trim-length INTEGER             The maximum length of the trimmed sequence (default: ${defaults.trimLength})
+    --bowtie-index-dir PATH           Directory containing bowtie indexes for reference genomes (default: ${defaults.bowtieIndexDir})
     """
     log.info ''
     exit 1
@@ -42,11 +45,12 @@ log.info """\
 Multi-Genome Alignment (MGA) Contaminant Screen
 ===============================================
 
-input       : $params.input
-Sample size : $params.sampleSize
-Chunk size  : $params.chunkSize
-Trim start  : $params.trimStart
-Trim length : $params.trimLength
+input                  : $params.input
+Sample size            : $params.sampleSize
+Chunk size             : $params.chunkSize
+Trim start             : $params.trimStart
+Trim length            : $params.trimLength
+Bowtie index directory : $params.bowtieIndexDir
 """
 
 
@@ -75,41 +79,60 @@ process sample_fastq {
 
 process trim_and_split {
     input:
-        path sampled_fastq
+        path fastq
 
     output:
-        path "chunk.*.fq.gz"
+        path 'chunk.*.fq'
 
     script:
     """
-    echo $sampled_fastq
     RUST_LOG=info ${projectDir}/target/release/trim-and-split-fastq \
         --chunk-size=${params.chunkSize} \
         --output-prefix=chunk \
         --start=${params.trimStart} \
         --length=${params.trimLength} \
-        ${sampled_fastq}
+        ${fastq}
+    """
+}
+
+
+process bowtie {
+    input:
+        each path(trimmed_fastq)
+        path bowtie_index_dir
+        each genome_prefix
+
+    output:
+        path "${genome_prefix}.bowtie.txt"
+
+    script:
+    """
+    bowtie --time --best --chunkmbs 256 ${bowtie_index_dir}/${genome_prefix} ${trimmed_fastq} ${genome_prefix}.bowtie.txt
     """
 }
 
 
 workflow {
-
-    input = Channel
+    input = channel
         .fromPath(params.input)
         .splitCsv(header: true, quote: '"')
         .map { row -> tuple("${row.ID}", file("${row.Fastq}"), "${row.Species}") }
 
-    // debugging purposes only
-    input.view { id, fastq, species -> "$id  $species" }
+    bowtie_index_dir = channel.fromPath("${params.bowtieIndexDir}", checkIfExists: true)
+
+    genomes = channel
+        .fromPath("${params.bowtieIndexDir}/*.rev.1.ebwt", checkIfExists: true)
+        .map { "${it.name}".replaceFirst(/.rev.1.ebwt$/, "") }
 
     sample_fastq(input)
 
     trim_and_split(sample_fastq.out.collect())
 
-    // debugging purposes only
-    trim_and_split.out.flatten().view()
-
+    bowtie(
+        trim_and_split.out,
+        bowtie_index_dir,
+        genomes
+    )
 }
 
 
