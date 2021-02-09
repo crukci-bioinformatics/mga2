@@ -66,14 +66,14 @@ process sample_fastq {
         path "${id}.sample.fq"
 
     script:
-    """
-    RUST_LOG=info ${projectDir}/target/release/sample-fastq \
-        --id=${id} \
-        --sample-size=${params.sampleSize} \
-        --output-file=${id}.sample.fq \
-        --replace-sequence-ids \
-        ${fastq}
-    """
+        """
+        RUST_LOG=info ${projectDir}/target/release/sample-fastq \
+            --id=${id} \
+            --sample-size=${params.sampleSize} \
+            --output-file=${id}.sample.fq \
+            --replace-sequence-ids \
+            ${fastq}
+        """
 }
 
 
@@ -85,14 +85,14 @@ process trim_and_split {
         path 'chunk.*.fq'
 
     script:
-    """
-    RUST_LOG=info ${projectDir}/target/release/trim-and-split-fastq \
-        --chunk-size=${params.chunkSize} \
-        --output-prefix=chunk \
-        --start=${params.trimStart} \
-        --length=${params.trimLength} \
-        ${fastq}
-    """
+        """
+        RUST_LOG=info ${projectDir}/target/release/trim-and-split-fastq \
+            --chunk-size=${params.chunkSize} \
+            --output-prefix=chunk \
+            --start=${params.trimStart} \
+            --length=${params.trimLength} \
+            ${fastq}
+        """
 }
 
 
@@ -100,15 +100,16 @@ process bowtie {
     input:
         each path(trimmed_fastq)
         path bowtie_index_dir
-        each genome_prefix
+        each genome
 
     output:
-        path "${genome_prefix}.bowtie.txt"
+        path "${prefix}.${genome}.bowtie.txt"
 
     script:
-    """
-    bowtie --time --best --chunkmbs 256 ${bowtie_index_dir}/${genome_prefix} ${trimmed_fastq} ${genome_prefix}.bowtie.txt
-    """
+        prefix=trimmed_fastq.baseName
+        """
+        bowtie --time --best --chunkmbs 256 ${bowtie_index_dir}/${genome} ${trimmed_fastq} | sed "s/^/${genome}\t/" > ${prefix}.${genome}.bowtie.txt
+        """
 }
 
 
@@ -133,6 +134,8 @@ workflow {
         bowtie_index_dir,
         genomes
     )
+
+    alignments = bowtie.out.collectFile(name: "bowtie_alignments.txt", storeDir: "${launchDir}")
 }
 
 
