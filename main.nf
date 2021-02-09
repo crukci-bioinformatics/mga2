@@ -49,18 +49,17 @@ Trim start  : $params.trimStart
 Trim length : $params.trimLength
 """
 
-Channel
-    .fromPath(params.input)
-    .splitCsv(header: true, quote: '"')
-    .map { row -> tuple("${row.ID}", file("${row.Fastq}")) }
-    .set { fastq_channel }
+
+// enable DSL 2 syntax
+nextflow.enable.dsl = 2
+
 
 process sample_fastq {
     input:
-        tuple id, path(fastq) from fastq_channel
+        tuple val(id), path(fastq), val(species)
 
     output:
-        path "${id}.sample.fq" into sample_fastq_channel
+        path "${id}.sample.fq"
 
     script:
     """
@@ -73,12 +72,13 @@ process sample_fastq {
     """
 }
 
+
 process trim_and_split {
     input:
-        path sampled_fastq from sample_fastq_channel.collect()
+        path sampled_fastq
 
     output:
-        path "chunk.*.fq.gz" into chunk_fastq_channel
+        path "chunk.*.fq.gz"
 
     script:
     """
@@ -92,18 +92,24 @@ process trim_and_split {
     """
 }
 
-chunk_fastq_channel.view()
 
+workflow {
 
+    input = Channel
+        .fromPath(params.input)
+        .splitCsv(header: true, quote: '"')
+        .map { row -> tuple("${row.ID}", file("${row.Fastq}"), "${row.Species}") }
 
-/*
-process align {
-    input:
-        path chunk_fastq from chunk_fastq_channel.flatten()
+    // debugging purposes only
+    input.view { id, fastq, species -> "$id  $species" }
 
-    script:
-    """
-    touch ${chunk_fastq}.touched
-    """
+    sample_fastq(input)
+
+    trim_and_split(sample_fastq.out.collect())
+
+    // debugging purposes only
+    trim_and_split.out.flatten().view()
+
 }
-*/
+
+
