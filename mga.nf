@@ -184,7 +184,7 @@ workflow {
     sample_fastq(input)
 
     sample_fastq.out.summary
-        .collectFile(name: "sequence_counts.txt", storeDir: "${launchDir}", keepHeader: true)
+        .collectFile(name: "sequence_counts.csv", storeDir: "${launchDir}", keepHeader: true)
 
     trim_and_split(sample_fastq.out.fastq.collect())
 
