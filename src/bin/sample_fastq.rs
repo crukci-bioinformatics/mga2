@@ -94,7 +94,7 @@ fn sample_fastq(
             count += 1;
             number_of_records_read += 1;
 
-            if count % 1_000_000 == 0 {
+            if count % 10_000_000 == 0 {
                 info!("{}", count);
             }
 
@@ -120,7 +120,7 @@ fn sample_fastq(
             }
         }
 
-        if count % 1_000_000 != 0 {
+        if count % 10_000_000 != 0 {
             info!("{}", count);
         }
     }
@@ -160,12 +160,12 @@ fn write_fastq_records(records: &[FastqRecord], output_file: &Option<PathBuf>) -
     for record in records {
         count += 1;
         writer.write_fastq(record)?;
-        if count % 1_000_000 == 0 {
+        if count % 10_000_000 == 0 {
             info!("{}", count);
         }
     }
 
-    if count % 1_000_000 != 0 {
+    if count % 10_000_000 != 0 {
         info!("{}", count);
     }
 
