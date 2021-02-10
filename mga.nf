@@ -35,7 +35,7 @@ Usage:
 
 Options:
     --help                            Show this message and exit
-    --sample-sheet                    Sample sheet CSV file containing ID, Fastq (file path/pattern) and Species columns (default: ${defaults.sampleSheet})
+    --sample-sheet                    Sample sheet CSV file containing id, fastq (file path/pattern) and species columns (default: ${defaults.sampleSheet})
     --sample-size INTEGER             Number of sequences to sample for each sample/dataset (default: ${defaults.sampleSize})
     --chunk-size INTEGER              Number of sequences for each chunk in batch processing of sampled sequences (default: ${defaults.chunkSize})
     --trim-start INTEGER              The position at which the trimmed sequence starts, all bases before this position are trimmed (default: ${defaults.trimStart})
@@ -173,7 +173,7 @@ workflow {
     input = channel
         .fromPath(params.sampleSheet)
         .splitCsv(header: true, quote: '"')
-        .map { row -> tuple("${row.ID}", file("${row.Fastq}"), "${row.Species}") }
+        .map { row -> tuple("${row.id}", file("${row.fastq}"), "${row.species}") }
 
     bowtie_index_dir = channel.fromPath("${params.bowtieIndexDir}", checkIfExists: true)
 
