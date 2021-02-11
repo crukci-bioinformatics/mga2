@@ -6,7 +6,10 @@ MAINTAINER Matt Eldridge "matthew.eldridge@cruk.cam.ac.uk" \
 
 RUN apt update && apt install -y \
     git \
-    curl
+    curl \
+    gdebi-core \
+    libxml2-dev \
+    libssl-dev
 
 RUN git clone https://github.com/crukci-bioinformatics/mga2 /opt/mga2 && \
     cargo install --path /opt/mga2
@@ -20,4 +23,13 @@ ENV PATH /opt/conda/bin:$PATH
 COPY conda.yml .
 
 RUN conda env update -n root -f conda.yml && conda clean -a
+
+RUN R_VERSION=4.0.3 && \
+    curl -O https://cdn.rstudio.com/r/debian-10/pkgs/r-${R_VERSION}_1_amd64.deb && \
+    gdebi -n r-${R_VERSION}_1_amd64.deb && \
+    rm r-${R_VERSION}_1_amd64.deb
+
+ENV PATH /opt/R/4.0.3/bin:$PATH
+
+RUN R -e 'install.packages("tidyverse", repos = "https://cloud.r-project.org")'
 
