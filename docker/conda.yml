@@ -1,0 +1,8 @@
+name: mga2
+channels:
+  - defaults
+  - bioconda
+  - conda-forge
+dependencies:
+  - bowtie=1.3.0
+  - exonerate=2.4.0
