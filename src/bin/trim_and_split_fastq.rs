@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use log::info;
-use mga::fastq::{create_fastq_reader, create_fastq_writer, FastqRecord};
+use mga2::fastq::{create_fastq_reader, create_fastq_writer, FastqRecord};
 use std::path::PathBuf;
 use structopt::StructOpt;
 

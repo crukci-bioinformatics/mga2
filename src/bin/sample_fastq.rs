@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use log::info;
-use mga::fastq::{create_fastq_reader, create_fastq_writer, FastqRecord};
+use mga2::fastq::{create_fastq_reader, create_fastq_writer, FastqRecord};
 use rand::{thread_rng, Rng};
 use serde::Serialize;
 use std::path::PathBuf;
