@@ -37,6 +37,7 @@ fn main() -> Result<()> {
     if config.chunk_size == 0 {
         bail!("Invalid chunk size");
     }
+
     if let Some(start) = config.start {
         if start == 0 {
             bail!("Invalid start position for trimming - numbering is 1-based");
