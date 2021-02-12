@@ -81,7 +81,7 @@ fn sample_fastq(
     let mut rng = thread_rng();
 
     // loop over and sample from input FASTQ files using reservoir sampling
-    for fastq_file in fastq_files {
+    'outer: for fastq_file in fastq_files {
         let filename = fastq_file.to_str().unwrap();
         info!("Reading {}", filename);
 
@@ -115,7 +115,7 @@ fn sample_fastq(
 
             if let Some(max_number_to_sample_from) = max_number_to_sample_from {
                 if count > max_number_to_sample_from {
-                    break;
+                    break 'outer;
                 }
             }
         }
