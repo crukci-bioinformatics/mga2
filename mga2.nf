@@ -5,6 +5,7 @@
 def defaults = [
     sampleSheet: 'samplesheet.csv',
     sampleSize: 100000,
+    maxNumberToSampleFrom: 10000000000,
     chunkSize: 5000000,
     trimStart: 11,
     trimLength: 36,
@@ -16,11 +17,11 @@ def defaults = [
 params.help = false
 params.sampleSheet = defaults.sampleSheet
 params.sampleSize = defaults.sampleSize
+params.maxNumberToSampleFrom = defaults.maxNumberToSampleFrom
 params.chunkSize = defaults.chunkSize
 params.trimStart = defaults.trimStart
 params.trimLength = defaults.trimLength
 params.bowtieIndexDir = defaults.bowtieIndexDir
-
 
 //print usage
 
@@ -46,7 +47,6 @@ Options:
     exit 1
 }
 
-
 // summary of configuration parameters
 
 log.info ''
@@ -62,7 +62,6 @@ Trim length            : $params.trimLength
 Bowtie index directory : $params.bowtieIndexDir
 """
 log.info ''
-
 
 // validate input parameters and calculate minimum sequence length used for sampling sequences
 
@@ -112,6 +111,8 @@ nextflow.enable.dsl = 2
 
 
 process sample_fastq {
+    tag "${id}"
+
     input:
         tuple val(id), path(fastq), val(species)
 
@@ -121,9 +122,11 @@ process sample_fastq {
 
     script:
         """
-        RUST_LOG=info ${projectDir}/target/release/sample-fastq \
+        RUST_LOG=info \
+        sample-fastq \
             --id=${id} \
             --sample-size=${params.sampleSize} \
+            --max-number-to-sample-from=${params.maxNumberToSampleFrom} \
             --min-sequence-length=${minimumSequenceLength} \
             --replace-sequence-ids \
             --output-file=${id}.sample.fq \
@@ -142,7 +145,8 @@ process trim_and_split {
 
     script:
         """
-        RUST_LOG=info ${projectDir}/target/release/trim-and-split-fastq \
+        RUST_LOG=info \
+        trim-and-split-fastq \
             --chunk-size=${params.chunkSize} \
             --output-prefix=chunk \
             --start=${params.trimStart} \
@@ -153,6 +157,8 @@ process trim_and_split {
 
 
 process bowtie {
+    tag "${prefix}.${genome}"
+
     input:
         each path(trimmed_fastq)
         path bowtie_index_dir
@@ -164,6 +170,7 @@ process bowtie {
     script:
         prefix=trimmed_fastq.baseName
         """
+        set -eo pipefail
         bowtie --time --best --chunkmbs 256 ${bowtie_index_dir}/${genome} ${trimmed_fastq} | sed "s/^/${genome}\t/" > ${prefix}.${genome}.bowtie.txt
         """
 }
