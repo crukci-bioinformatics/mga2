@@ -171,7 +171,8 @@ process bowtie {
         prefix=trimmed_fastq.baseName
         """
         set -eo pipefail
-        bowtie --time --best --chunkmbs 256 ${bowtie_index_dir}/${genome} ${trimmed_fastq} | sed "s/^/${genome}\t/" > ${prefix}.${genome}.bowtie.txt
+        echo "genome	read	strand	chr	pos	sequence	quality	num	mismatches" > ${prefix}.${genome}.bowtie.txt
+        bowtie --time --best --chunkmbs 256 ${bowtie_index_dir}/${genome} ${trimmed_fastq} | sed "s/^/${genome}\t/" >> ${prefix}.${genome}.bowtie.txt
         """
 }
 
@@ -201,7 +202,7 @@ workflow {
         genomes
     )
 
-    alignments = bowtie.out.collectFile(name: "bowtie_alignments.txt", storeDir: "${launchDir}")
+    alignments = bowtie.out.collectFile(name: "bowtie_alignments.txt", storeDir: "${launchDir}", keepHeader: true)
 }
 
 
