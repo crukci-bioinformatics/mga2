@@ -1,0 +1,30 @@
+genome,species,synonyms
+ath.TAIR10,Arabidopsis thaliana (thale cress),arabidopsis_thaliana|arabidopsis thaliana|thale cress
+bacteria.NCBI,Bacteria,
+bta.UMD3.1,Bos taurus (cow),bos_taurus|bos taurus|cow
+cel.WBcel235,Caenorhabditis elegans (roundworm),caenorhabditis_elegans|caenorhabditis elegans|c elegans
+cfa.CanFam3.1,Canis familiaris (dog),canis_familiaris|canis familiaris|dog
+cjc.C_jacchus3.2.1,Callithrix jacchus (marmoset),callithrix_jacchus|callithrix jacchus|marmoset
+ddi.dicty_2.7,Dictyostelium discoideum (slime mold),dictyostelium_discoideum|dictyostelium discoideum
+dme.dm6,Drosophila melanogaster (fruitfly),drosophila_melanogaster|drosophila melanogaster|fruitfly|fruit fly
+dre.GRCz10,Danio rerio (zebrafish),danio_rerio|danio rerio|zebrafish
+ecb.EquCab2,Equus caballus (horse),equus caballus|equus caballus|horse
+eco.HUSEC2011CHR1,Escherichia coli,escherichia_coli|e coli
+fca.Felis_catus_6.2,Felis catus (cat),felis_catus|felis catus|cat
+fungi.NCBI,Fungi,
+gga.Gallus_gallus-5.0,Gallus gallus (chicken),gallus_gallus|gallus gallus|chicken
+hsa.GRCh38,Homo sapiens (human),homo_sapiens|homo sapiens|human
+mca.CAROLI_EIJ_v1.1,Mus caroli (Ryukyu mouse),mus_caroli|mus caroli|ryukyu mouse
+mcc.Mmul_8.0.1,Macaca mulatta (Rhesus macaque),macaca_mulatta|macaca mulatta|rhesus macaque|macaque
+mdo.monDom5,Monodelphis domestica (opossum),monodelphis_domestica|monodelphis domestica|opossum
+mmc.CAST_EiJ_v1,Mus musculus castaneus (Southeastern Asian house mouse),mus_musculus_castaneus|mus musculus castaneus
+mmu.GRCm38,Mus musculus (mouse),mus_musculus|mus musculus|mouse|mus_spretus|mus spretus
+ocu.OryCun2.0,Oryctolagus cuniculus (rabbit),oryctolagus_cuniculus|oryctolagus cuniculus|rabbit
+phix.Illumina.RTA,Phi X 174,phix
+ribosomal_RNA,Ribomsomal RNA (human),
+rno.Rnor_6.0,Rattus norvegicus (rat),rattus_norvegicus|rattus norvegicus|rat
+sce.R64-1-1,Saccharomyces cerevisiae (brewer's yeast),saccharomyces_cerevisiae|saccharomyces cerevisiae|yeast
+ssc.Sscrofa11.1,Sus scrofa (pig),sus_scrofa|sus scrofa
+tng.TETRAODON8,Tetraodon nigroviridis (Green Spotted Pufferfish),tetraodon_nigroviridis|tetraodon nigroviridis|green spotted pufferfish|pufferfish
+viruses.NCBI,Viruses,
+xla.XL9.2,Xenopus laevis (African clawed frog),xenopus_laevis|xenopus laevis|frog|xenopus_tropicalis|xenopus tropicalis
