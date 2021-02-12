@@ -133,7 +133,7 @@ alignments <- alignments %>%
   mutate(length = nchar(sequence)) %>%
   mutate(number_of_mismatches = str_count(mismatches, ",") + 1L) %>%
   mutate(number_of_mismatches = as.integer(replace_na(number_of_mismatches, 0L))) %>%
-  separate(read, into = c("id", "read"), sep = ":") %>%
+  separate(read, into = c("id", "read"), sep = ":(?=\\d+$)") %>%
   select(id, read, length, genome, mismatches = number_of_mismatches)
 
 # mark alignments to the expected genome(s)
