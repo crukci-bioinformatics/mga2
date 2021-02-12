@@ -27,7 +27,7 @@ struct Config {
 
     /// The maximum number of records to read/sample from
     #[structopt(short, long)]
-    max_number_to_sample_from: Option<u32>,
+    max_number_to_sample_from: Option<u64>,
 
     /// The minimum length of sequences to include in the sample
     #[structopt(short = "l", long)]
@@ -72,11 +72,11 @@ fn main() -> Result<()> {
 fn sample_fastq(
     fastq_files: &[PathBuf],
     sample_size: u32,
-    max_number_to_sample_from: Option<u32>,
+    max_number_to_sample_from: Option<u64>,
     min_sequence_length: Option<u32>,
-) -> Result<(Vec<FastqRecord>, u32)> {
+) -> Result<(Vec<FastqRecord>, u64)> {
     let mut sampled_records = Vec::new();
-    let mut number_of_records_read = 0;
+    let mut number_of_records_read: u64 = 0;
 
     let mut rng = thread_rng();
 
@@ -108,7 +108,7 @@ fn sample_fastq(
                 sampled_records.push(record.clone());
             } else {
                 let index = rng.gen_range(0..number_of_records_read);
-                if index < sample_size {
+                if index < sample_size as u64 {
                     sampled_records[index as usize] = record.clone();
                 }
             }
@@ -177,13 +177,13 @@ fn write_fastq_records(records: &[FastqRecord], output_file: &Option<PathBuf>) -
 #[derive(Debug, Serialize)]
 struct Summary {
     id: String,
-    read: u32,
+    read: u64,
     sampled: u32,
 }
 
 fn write_summary(
     id: &Option<String>,
-    read: u32,
+    read: u64,
     sampled: u32,
     summary_file: &PathBuf,
 ) -> Result<()> {
