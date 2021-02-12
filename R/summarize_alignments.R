@@ -1,30 +1,72 @@
-suppressPackageStartupMessages({
-  library(tidyverse)
-})
+suppressPackageStartupMessages(library(optparse))
 
-args <- commandArgs(trailing=TRUE)
-if (length(args) < 4)
-{
-  stop('Usage: Rscript summarize_alignments.R counts bowtie_alignments [control_species]')
-}
+option_list <- list(
 
-args <- c("samplesheet.csv", "genomes.csv", "sequence_counts.csv", "bowtie_alignments.txt", "phix")
+  make_option(c("--samples"), dest = "samples_file",
+              help = "Sample sheet file containing id and species columns"),
 
-samples_file <- args[1]
-genomes_file <- args[2]
-counts_file <- args[3]
-alignments_file <- args[4]
-control_species <- args[5]
+  make_option(c("--genomes"), dest = "genomes_file",
+              help = "Genomes file containing id and species columns"),
+  
+  make_option(c("--counts"), dest = "counts_file",
+              help = "Sequence counts file output by sample-fastq containing id, read and sampled columns"),
+
+  make_option(c("--alignments"), dest = "alignments_file",
+              help = "Alignments file with collated output from bowtie with genome, read, strand, chr, pos, sequence, quality, num and mismatch columns"),
+
+  make_option(c("--control"), dest = "control_species",
+              help = "The control or spike-in genome/species (optional)"),
+
+  make_option(c("--summary"), dest = "summary_file",
+              help = "Summary CSV output file"),
+  
+  make_option(c("--plot"), dest = "plot_file",
+              help = "Plot PDF output file")
+)
+
+option_parser <- OptionParser(usage = "usage: %prog [options]", option_list = option_list, add_help_option = TRUE)
+
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args) == 0) args <- "--help"
+
+# args <- c(
+#   "--samples=samplesheet.csv",
+#   "--genomes=genomes.csv",
+#   "--counts=sequence_counts.csv",
+#   "--alignments=bowtie_alignments.txt",
+#   "--control=phix",
+#   "--summary=summary.csv",
+#   "--plot=summary.pdf"
+# )
+
+opt <- parse_args(option_parser, args)
+
+samples_file <- opt$samples_file
+genomes_file <- opt$genomes_file
+counts_file <- opt$counts_file
+alignments_file <- opt$alignments_file
+control_species <- opt$control_species
+summary_file <- opt$summary_file
+plot_file <- opt$plot_file
+
+if (is.null(samples_file)) stop("Samples file must be specified")
+if (is.null(genomes_file)) stop("Genomes file must be specified")
+if (is.null(counts_file)) stop("Sequence counts file must be specified")
+if (is.null(alignments_file)) stop("Alignments file must be specified")
+if (is.null(summary_file)) stop("Summary CSV output file must be specified")
+if (is.null(plot_file)) stop("Plot PDF output file must be specified")
+
+suppressPackageStartupMessages(library(tidyverse))
 
 # read sample sheet
-samples <- read_csv(samples_file, col_types = "ccc")
+samples <- read_csv(samples_file, col_types = cols(.default = col_character()))
 missing_columns <- setdiff(c("id", "species"), colnames(samples))
 if (length(missing_columns) > 0) {
   stop("Missing columns in ", samples_file, " (", str_c(missing_columns, collapse = ", "), ")")
 }
 
 # read genomes file
-genomes <- read_csv(genomes_file, col_types = "ccc")
+genomes <- read_csv(genomes_file, col_types = cols(.default = col_character()))
 missing_columns <- setdiff(c("genome", "species"), colnames(genomes))
 if (length(missing_columns) > 0) {
   stop("Missing columns in ", genomes_file, " (", str_c(missing_columns, collapse = ", "), ")")
@@ -32,6 +74,8 @@ if (length(missing_columns) > 0) {
 
 # create synonym lookup table
 synonyms <- bind_rows(
+  genomes %>%
+    select(genome, synonym = genome),
   genomes %>%
     select(genome, synonym = species),
   genomes %>%
@@ -71,19 +115,25 @@ expected_species <- expected_species %>%
 
 # read sequence counts summary from FASTQ sampling
 counts <- read_csv(counts_file, col_types = "cii")
+missing_columns <- setdiff(c("id", "read", "sampled"), colnames(counts))
+if (length(missing_columns) > 0) {
+  stop("Missing columns in ", counts_file, " (", str_c(missing_columns, collapse = ", "), ")")
+}
 
 # read bowtie alignment output
-alignments <- read_tsv(
-  alignments_file,
-  col_names = c("genome", "read", "strand", "chr", "pos", "sequence", "quality", "num", "mismatches"),
-  col_types = "cccciccic")
+alignments <- read_tsv(alignments_file, col_types = "cccciccic")
+alignment_columns <- c("genome", "read", "strand", "chr", "pos", "sequence", "quality", "num", "mismatches")
+missing_columns <- setdiff(alignment_columns, colnames(alignments))
+if (length(missing_columns) > 0) {
+  stop("Missing columns in ", alignments_file, " (", str_c(missing_columns, collapse = ", "), ")")
+}
 
 # calculate sequence lengths, count mismatches and separate sample name from read id
 alignments <- alignments %>%
   mutate(length = nchar(sequence)) %>%
   mutate(number_of_mismatches = str_count(mismatches, ",") + 1L) %>%
   mutate(number_of_mismatches = as.integer(replace_na(number_of_mismatches, 0L))) %>%
-  separate(read, into = c("id", "read"), sep = ":", convert = TRUE) %>%
+  separate(read, into = c("id", "read"), sep = ":") %>%
   select(id, read, length, genome, mismatches = number_of_mismatches)
 
 # mark alignments to the expected genome(s)
@@ -101,10 +151,12 @@ aligned_summary <- alignments %>%
   select(id, genome, expected, control, count, percentage, error_rate)
 
 # filter best alignments
-alignments <- alignments %>%
-  group_by(id, read) %>%
-  filter(mismatches <= min(mismatches)) %>%
-  ungroup()
+if (nrow(alignments) > 0) {
+  alignments <- alignments %>%
+    group_by(id, read) %>%
+    filter(mismatches <= min(mismatches)) %>%
+    ungroup()
+}
 
 best_aligned_counts <- count(alignments, id, genome, name = "count")
 
@@ -126,7 +178,8 @@ assigned_summary <- assigned_alignments %>%
 # unmapped read counts
 unmapped_counts <- assigned_alignments %>%
   count(id, name = "aligned") %>%
-  left_join(counts, by = "id") %>%
+  full_join(counts, by = "id") %>%
+  mutate(aligned = replace_na(aligned, 0)) %>%
   mutate(count = sampled - aligned) %>%
   mutate(percentage = round(100 * count / sampled, digits = 1)) %>%
   select(id, count, percentage)
@@ -141,7 +194,6 @@ summary <- aligned_summary %>%
 
 summary <- samples %>%
   select(id, species) %>%
-  left_join(select(counts, id, `reads` = read, sampled), by = "id") %>%
   left_join(summary, by = "id") %>%
   mutate(id = as_factor(id)) %>%
   arrange(id, is.na(expected), desc(assigned))
@@ -149,12 +201,11 @@ summary <- samples %>%
 summary %>%
   mutate(expected = ifelse(expected, "yes", "no")) %>%
   mutate(control = ifelse(control, "yes", "no")) %>%
-  write_csv("summary.csv", na = "")
-
+  write_csv(summary_file, na = "")
 
 # stacked bar plot
-
 plot <- summary %>%
+  left_join(select(counts, id, `reads` = read, sampled), by = "id") %>%
   mutate(category = ifelse(expected, "expected species", "contaminant")) %>%
   mutate(category = ifelse(control, "control", category)) %>%
   mutate(category = replace_na(category, "unmapped")) %>%
@@ -185,11 +236,6 @@ plot <- summary %>%
     axis.title.y = element_blank()
   )
 
-pdf("mga_results.pdf", width = 8, height = 1 + nrow(distinct(summary, id)) * 0.55)
+pdf(plot_file, width = 8, height = 1 + nrow(distinct(summary, id)) * 0.55)
 print(plot)
 dev.off()
-
-# TODO check what happens for an empty alignments file
-
-# TODO use optparse for arguments and output files
-
