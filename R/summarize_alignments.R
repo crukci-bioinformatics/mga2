@@ -181,7 +181,7 @@ unmapped_counts <- assigned_alignments %>%
   full_join(counts, by = "id") %>%
   mutate(aligned = replace_na(aligned, 0)) %>%
   mutate(count = sampled - aligned) %>%
-  mutate(percentage = round(100 * count / sampled, digits = 1)) %>%
+  mutate(percentage = ifelse(sampled == 0, 0.0, round(100 * count / sampled, digits = 1))) %>%
   select(id, count, percentage)
 
 # summary
