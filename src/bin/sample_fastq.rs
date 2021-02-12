@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use log::info;
 use mga2::fastq::{create_fastq_reader, create_fastq_writer, FastqRecord};
 use rand::{thread_rng, Rng};
@@ -49,6 +49,22 @@ fn main() -> Result<()> {
 
     let config = Config::from_args();
 
+    if config.sample_size == 0 {
+        bail!("Invalid sample size");
+    }
+
+    if let Some(max_number_to_sample_from) = config.max_number_to_sample_from {
+        if max_number_to_sample_from == 0 {
+            bail!("Invalid maximum number of records to sample from");
+        }
+    }
+
+    if let Some(min_sequence_length) = config.min_sequence_length {
+        if min_sequence_length == 0 {
+            bail!("Invalid minimum sequence length");
+        }
+    }
+
     let (mut records, total) = sample_fastq(
         &config.fastq_files,
         config.sample_size,
@@ -98,23 +114,21 @@ fn sample_fastq(
                 info!("{}", count);
             }
 
-            if let Some(min_sequence_length) = min_sequence_length {
-                if record.seq.len() < (min_sequence_length as usize) {
-                    continue;
-                }
-            }
-
-            if sampled_records.len() < sample_size as usize {
-                sampled_records.push(record.clone());
-            } else {
-                let index = rng.gen_range(0..number_of_records_read);
-                if index < sample_size as u64 {
-                    sampled_records[index as usize] = record.clone();
+            if min_sequence_length.is_none()
+                || min_sequence_length.unwrap() as usize <= record.seq.len()
+            {
+                if sampled_records.len() < sample_size as usize {
+                    sampled_records.push(record.clone());
+                } else {
+                    let index = rng.gen_range(0..number_of_records_read);
+                    if index < sample_size as u64 {
+                        sampled_records[index as usize] = record.clone();
+                    }
                 }
             }
 
             if let Some(max_number_to_sample_from) = max_number_to_sample_from {
-                if count > max_number_to_sample_from {
+                if count == max_number_to_sample_from {
                     break 'outer;
                 }
             }
