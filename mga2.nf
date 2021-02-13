@@ -4,24 +4,28 @@
 
 def defaults = [
     sampleSheet: 'samplesheet.csv',
+    genomeDetails: "${projectDir}/resources/genomes.csv",
     sampleSize: 100000,
     maxNumberToSampleFrom: 10000000000,
     chunkSize: 5000000,
     trimStart: 11,
     trimLength: 36,
     bowtieIndexDir: "bowtie_indexes",
+    control: 'PhiX'
 ]
 
 // set paramters to default settings
 
 params.help = false
 params.sampleSheet = defaults.sampleSheet
+params.genomeDetails = defaults.genomeDetails
 params.sampleSize = defaults.sampleSize
 params.maxNumberToSampleFrom = defaults.maxNumberToSampleFrom
 params.chunkSize = defaults.chunkSize
 params.trimStart = defaults.trimStart
 params.trimLength = defaults.trimLength
 params.bowtieIndexDir = defaults.bowtieIndexDir
+params.control = defaults.control
 
 //print usage
 
@@ -36,12 +40,14 @@ Usage:
 
 Options:
     --help                            Show this message and exit
-    --sample-sheet                    Sample sheet CSV file containing id, fastq (file path/pattern) and species columns (default: ${defaults.sampleSheet})
+    --sample-sheet FILE               Sample sheet CSV file containing id, fastq (file path/pattern) and species columns (default: ${defaults.sampleSheet})
+    --genome-details FILE             Genome details CSV files containing genome, species and synonym columns (default: ${defaults.genomeDetails})
     --sample-size INTEGER             Number of sequences to sample for each sample/dataset (default: ${defaults.sampleSize})
     --chunk-size INTEGER              Number of sequences for each chunk in batch processing of sampled sequences (default: ${defaults.chunkSize})
     --trim-start INTEGER              The position at which the trimmed sequence starts, all bases before this position are trimmed (default: ${defaults.trimStart})
     --trim-length INTEGER             The maximum length of the trimmed sequence (default: ${defaults.trimLength})
     --bowtie-index-dir PATH           Directory containing bowtie indexes for reference genomes (default: ${defaults.bowtieIndexDir})
+    --control SPECIES                 Species used as a spike-in control (default: ${defaults.control})
     """
     log.info ''
     exit 1
@@ -60,6 +66,7 @@ Chunk size             : $params.chunkSize
 Trim start             : $params.trimStart
 Trim length            : $params.trimLength
 Bowtie index directory : $params.bowtieIndexDir
+Spike-in control       : $params.control
 """
 log.info ''
 
@@ -172,14 +179,50 @@ process bowtie {
         """
         set -eo pipefail
         echo "genome	read	strand	chr	pos	sequence	quality	num	mismatches" > ${prefix}.${genome}.bowtie.txt
-        bowtie --time --best --chunkmbs 256 ${bowtie_index_dir}/${genome} ${trimmed_fastq} | sed "s/^/${genome}\t/" >> ${prefix}.${genome}.bowtie.txt
+        bowtie \
+            --time \
+            --best \
+            --chunkmbs 256 \
+            ${bowtie_index_dir}/${genome} \
+            ${trimmed_fastq} \
+        | sed "s/^/${genome}\t/" \
+        >> ${prefix}.${genome}.bowtie.txt
+        """
+}
+
+
+process summary {
+    publishDir "${launchDir}"
+
+    input:
+        path(samples)
+        path(genome_details)
+        path(counts)
+        path(alignments)
+
+    output:
+        path 'summary.csv'
+        path 'summary.pdf'
+
+    script:
+        """
+        Rscript ${projectDir}/R/summarize_alignments.R \
+            --samples=${samples} \
+            --genomes=${genome_details} \
+            --counts=${counts} \
+            --alignments=${alignments} \
+            --control=${params.control} \
+            --summary=summary.csv \
+            --plot=summary.pdf
         """
 }
 
 
 workflow {
-    input = channel
-        .fromPath(params.sampleSheet)
+    samples = channel.fromPath(params.sampleSheet)
+    genome_details = channel.fromPath(params.genomeDetails)
+
+    input = samples
         .splitCsv(header: true, quote: '"')
         .map { row -> tuple("${row.id}", file("${row.fastq}"), "${row.species}") }
 
@@ -191,7 +234,7 @@ workflow {
 
     sample_fastq(input)
 
-    sample_fastq.out.summary
+    counts = sample_fastq.out.summary
         .collectFile(name: "sequence_counts.csv", storeDir: "${launchDir}", keepHeader: true)
 
     trim_and_split(sample_fastq.out.fastq.collect())
@@ -203,6 +246,12 @@ workflow {
     )
 
     alignments = bowtie.out.collectFile(name: "bowtie_alignments.txt", storeDir: "${launchDir}", keepHeader: true)
-}
 
+    summary(
+        samples,
+        genome_details,
+        counts,
+        alignments
+    )
+}
 
