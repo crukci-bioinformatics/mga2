@@ -206,13 +206,13 @@ summary %>%
 # stacked bar plot
 plot <- summary %>%
   left_join(select(counts, id, `reads` = read, sampled), by = "id") %>%
-  mutate(category = ifelse(expected, "expected species", "contaminant")) %>%
+  mutate(category = ifelse(expected, "expected species", "unexpected/contaminant")) %>%
   mutate(category = ifelse(control, "control", category)) %>%
   mutate(category = replace_na(category, "unmapped")) %>%
-  mutate(category = factor(category, levels = rev(c("expected species", "control", "contaminant", "unmapped")))) %>%
+  mutate(category = factor(category, levels = rev(c("expected species", "control", "unexpected/contaminant", "unmapped")))) %>%
   mutate(id = fct_rev(id)) %>%
   mutate(reads = (assigned / sampled) * reads / 1e6) %>%
-  mutate(transparency = pmax(1.5 - `aligned error rate`, 0, na.rm = TRUE)) %>%
+  mutate(transparency = pmax(1.5 - `assigned error rate`, 0, na.rm = TRUE)) %>%
   mutate(transparency = ifelse(category == "unmapped", max(transparency), transparency)) %>%
   arrange(id, category, desc(reads)) %>%
   mutate(group = row_number()) %>%
