@@ -178,7 +178,7 @@ process bowtie {
         prefix=trimmed_fastq.baseName
         """
         set -eo pipefail
-        echo "genome	read	strand	chr	pos	sequence	quality	num	mismatches" > ${prefix}.${genome}.bowtie.txt
+        echo "genome	read	strand	chromosome	position	sequence	quality	num	mismatches" > ${prefix}.${genome}.bowtie.txt
         bowtie \
             --time \
             --best \
