@@ -125,7 +125,7 @@ process sample_fastq {
 
     output:
         path "${id}.sample.fq", emit: fastq
-        path "${id}.summary.txt", emit: summary
+        path "${id}.summary.csv", emit: summary
 
     script:
         """
@@ -137,7 +137,7 @@ process sample_fastq {
             --min-sequence-length=${minimumSequenceLength} \
             --replace-sequence-ids \
             --output-file=${id}.sample.fq \
-            --summary-file=${id}.summary.txt \
+            --summary-file=${id}.summary.csv \
             ${fastq}
         """
 }
@@ -192,7 +192,7 @@ process bowtie {
 
 
 process summary {
-    publishDir "${launchDir}"
+    publishDir "${launchDir}", mode: 'copy'
 
     input:
         path(samples)
