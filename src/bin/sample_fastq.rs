@@ -33,11 +33,9 @@ struct Config {
     #[structopt(short = "l", long)]
     min_sequence_length: Option<u32>,
 
-    /// Replace sequence identifiers and descriptions in record header with
-    /// the record number, optionally prefixed with the dataset identifier
-    /// if specified
+    // Prepend dataset identifier to record identifier
     #[structopt(short, long)]
-    replace_sequence_ids: bool,
+    prepend_id: bool,
 
     /// Summary of the numbers of records read and sampled
     #[structopt(short, long)]
@@ -72,8 +70,12 @@ fn main() -> Result<()> {
         config.min_sequence_length,
     )?;
 
-    if config.replace_sequence_ids {
-        rename_sequence_ids(&mut records, &config.id);
+    if config.prepend_id {
+        if let Some(id) = &config.id {
+            for record in records.iter_mut() {
+                record.id = format!("{}|{}", id, record.id);
+            }
+        }
     }
 
     write_fastq_records(&records, &config.output_file)?;
@@ -143,21 +145,6 @@ fn sample_fastq(
     info!("Number of records sampled: {}", sampled_records.len());
 
     Ok((sampled_records, number_of_records_read))
-}
-
-fn rename_sequence_ids(records: &mut Vec<FastqRecord>, prefix: &Option<String>) {
-    info!("Renaming sequence identifiers");
-    let mut count = 0;
-    for record in records.iter_mut() {
-        count += 1;
-        match prefix {
-            Some(prefix) => {
-                record.id = format!("{}|{}|{}", prefix.trim(), count, record.id)
-            },
-            None => record.id = count.to_string(),
-        }
-        record.desc = None;
-    }
 }
 
 fn write_fastq_records(records: &[FastqRecord], output_file: &Option<PathBuf>) -> Result<()> {
