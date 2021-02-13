@@ -33,3 +33,5 @@ ENV PATH /opt/R/4.0.3/bin:$PATH
 
 RUN R -e 'install.packages("tidyverse", repos = "https://cloud.r-project.org")'
 
+RUN R -e 'install.packages("optparse", repos = "https://cloud.r-project.org")'
+
