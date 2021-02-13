@@ -151,7 +151,9 @@ fn rename_sequence_ids(records: &mut Vec<FastqRecord>, prefix: &Option<String>) 
     for record in records.iter_mut() {
         count += 1;
         match prefix {
-            Some(id) => record.id = format!("{}:{}", id, count),
+            Some(prefix) => {
+                record.id = format!("{}|{}|{}", prefix.trim(), count, record.id)
+            },
             None => record.id = count.to_string(),
         }
         record.desc = None;
