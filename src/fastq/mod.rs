@@ -163,6 +163,13 @@ impl<R: BufRead> FastqReader<R> {
             }
         }
 
+        if record.id.is_empty() {
+            bail!(
+                "error extracting sequence id for record at line {}",
+                self.line_count
+            );
+        }
+
         let mut length = 0;
 
         loop {
