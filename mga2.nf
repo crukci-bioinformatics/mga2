@@ -12,7 +12,6 @@ def defaults = [
     trimStart: 11,
     trimLength: 36,
     bowtieIndexDir: "bowtie_indexes",
-    control: 'PhiX',
     outputDir: "${launchDir}",
     outputPrefix: ""
 ]
@@ -29,7 +28,6 @@ params.chunkSize = defaults.chunkSize
 params.trimStart = defaults.trimStart
 params.trimLength = defaults.trimLength
 params.bowtieIndexDir = defaults.bowtieIndexDir
-params.control = defaults.control
 params.outputDir = defaults.outputDir
 params.outputPrefix = defaults.outputPrefix
 
@@ -54,7 +52,6 @@ Options:
     --trim-start INTEGER              The position at which the trimmed sequence starts, all bases before this position are trimmed (default: ${defaults.trimStart})
     --trim-length INTEGER             The maximum length of the trimmed sequence (default: ${defaults.trimLength})
     --bowtie-index-dir PATH           Directory containing bowtie indexes for reference genomes (default: ${defaults.bowtieIndexDir})
-    --control SPECIES                 Species used as a spike-in control (default: ${defaults.control})
     --output-dir PATH                 Output directory (default: ${defaults.outputDir})
     --output-prefix PREFIX            Prefix for output files (default: ${defaults.outputPrefix})
     """
@@ -76,7 +73,6 @@ Chunk size             : $params.chunkSize
 Trim start             : $params.trimStart
 Trim length            : $params.trimLength
 Bowtie index directory : $params.bowtieIndexDir
-Spike-in control       : $params.control
 Output directory       : $params.outputDir
 Output prefix          : $params.outputPrefix
 """
@@ -213,26 +209,25 @@ process summary {
 
     input:
         path samples
-        path genome_details
         path counts
         path alignments
 
     output:
-        path "${params.outputPrefix}mga_alignments.txt"
-        path "${params.outputPrefix}mga_summary.csv"
-        path "${params.outputPrefix}mga_bar_chart.pdf"
+        path "${params.outputPrefix}sequence_counts.txt"
+        path "${params.outputPrefix}alignments.txt"
+        path "${params.outputPrefix}summary.csv"
+        path "${params.outputPrefix}bar_chart.pdf"
 
     script:
         """
         Rscript ${projectDir}/R/summarize_alignments.R \
             --samples=${samples} \
-            --genomes=${genome_details} \
             --counts=${counts} \
             --alignments=${alignments} \
-            --control=${params.control} \
-            --output-alignments=${outputPrefix}mga_alignments.txt \
-            --output-summary=${outputPrefix}mga_summary.csv \
-            --output-plot=${outputPrefix}mga_bar_chart.pdf
+            --output-counts="${params.outputPrefix}sequence_counts.csv" \
+            --output-alignments="${params.outputPrefix}alignments.txt" \
+            --output-summary="${params.outputPrefix}summary.csv" \
+            --output-plot="${params.outputPrefix}bar_chart.pdf"
         """
 }
 
@@ -264,8 +259,6 @@ workflow {
         .splitCsv(header: true, quote: '"')
         .map { row -> tuple("${row.id_prefix}", "${row.id}", file("${fastqDir}${row.fastq}"), "${fastqDir}${row.fastq}") }
 
-    fastq.view()
-
     fastq
         .filter{ it[2].isEmpty() }
         .subscribe { log.error "No FASTQ files found for ${it[1]} matching pattern ${it[3]}" }
@@ -291,15 +284,10 @@ workflow {
 
     alignments = bowtie.out.collectFile(name: "bowtie_alignments.txt", keepHeader: true)
 
-/*
-    genome_details = channel.fromPath(params.genomeDetails, checkIfExists: true)
-
     summary(
-        samples,
-        genome_details,
+        check_inputs.out,
         counts,
         alignments
     )
-*/
 }
 
