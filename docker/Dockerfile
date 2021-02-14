@@ -11,9 +11,6 @@ RUN apt update && apt install -y \
     libxml2-dev \
     libssl-dev
 
-RUN git clone https://github.com/crukci-bioinformatics/mga2 /opt/mga2 && \
-    cargo install --path /opt/mga2
-
 RUN curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /opt/miniconda3.sh && \
     sh /opt/miniconda3.sh -b -p /opt/conda && \
     rm /opt/miniconda3.sh
@@ -35,4 +32,8 @@ ENV PATH /opt/R/${R_VERSION}/bin:${PATH}
 RUN R -e 'install.packages("tidyverse", repos = "https://cloud.r-project.org")'
 
 RUN R -e 'install.packages("optparse", repos = "https://cloud.r-project.org")'
+
+RUN git clone https://github.com/crukci-bioinformatics/mga2 /opt/mga2 && \
+    cargo install --path /opt/mga2
+
 
