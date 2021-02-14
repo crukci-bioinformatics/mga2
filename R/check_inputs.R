@@ -1,5 +1,5 @@
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) < 1)
+if (length(args) < 3)
 {
   stop('Usage: Rscript check_inputs.R samples_file genomes_file output_file')
 }
@@ -15,6 +15,13 @@ samples <- read_csv(samples_file, col_types = cols(.default = col_character()))
 missing_columns <- setdiff(c("id", "fastq", "species", "control"), colnames(samples))
 if (length(missing_columns) > 0) {
   stop("Missing columns in ", samples_file, " (", str_c(missing_columns, collapse = ", "), ")")
+}
+samples <- mutate(samples, id = as_factor(id))
+if (nrow(filter(samples, is.na(samples$id))) > 0) {
+  stop("Missing sample identifiers")
+}
+if (nlevels(samples$id) != nrow(samples)) {
+  stop("Duplicate sample identifiers")
 }
 
 # read genomes file
