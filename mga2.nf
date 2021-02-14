@@ -213,7 +213,7 @@ process summary {
         path alignments
 
     output:
-        path "${params.outputPrefix}sequence_counts.txt"
+        path "${params.outputPrefix}sequence_counts.csv"
         path "${params.outputPrefix}alignments.txt"
         path "${params.outputPrefix}summary.csv"
         path "${params.outputPrefix}bar_chart.pdf"
@@ -266,7 +266,7 @@ workflow {
     sample_fastq(fastq)
 
     counts = sample_fastq.out.summary
-        .collectFile(name: "sequence_counts.csv", storeDir: "${params.outputDir}", keepHeader: true)
+        .collectFile(name: "sequence_counts.csv", keepHeader: true)
 
     trim_and_split(sample_fastq.out.fastq.collect())
 
