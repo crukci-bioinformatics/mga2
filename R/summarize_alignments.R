@@ -11,9 +11,6 @@ option_list <- list(
   make_option(c("--alignments"), dest = "alignments_file",
               help = "Alignments file with collated output from bowtie with genome, read, strand, chromosome, position, sequence, quality, num and mismatch columns"),
 
-  make_option(c("--control"), dest = "control_species",
-              help = "The control or spike-in genome/species"),
-  
   make_option(c("--output-counts"), dest = "output_counts_file",
               help = "Output file containing summary of sequence counts"),
   
@@ -31,12 +28,6 @@ option_parser <- OptionParser(usage = "usage: %prog [options]", option_list = op
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) == 0) args <- "--help"
-
-args <- c(
- "--samples=samples.csv",
- "--counts=sequence_counts.csv",
- "--alignments=bowtie_alignments.txt"
-)
 
 opt <- parse_args(option_parser, args)
 
