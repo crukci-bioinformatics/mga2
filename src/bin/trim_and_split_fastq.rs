@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use log::info;
+use log::{info, warn};
 use mga2::fastq::{create_fastq_reader, create_fastq_writer, FastqRecord};
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -135,7 +135,7 @@ fn trim_and_split(
     fastq_writer.flush()?;
 
     if filtered_count == count {
-        bail!("No sequences remain after trimming and zero-length sequences filtered");
+        warn!("No sequences remain after trimming and zero-length sequences filtered");
     }
 
     Ok(())
