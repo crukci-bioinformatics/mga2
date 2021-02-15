@@ -194,19 +194,24 @@ summary %>%
   write_csv(output_summary_file, na = "")
 
 # stacked bar plot
+lower_error_rate <- 0.5
+upper_error_rate <- 1.5
+
 plot <- summary %>%
   left_join(select(samples, id, sequences, sampled), by = "id") %>%
+  filter(assigned > 0) %>%
   mutate(category = ifelse(expected, "expected species", "unexpected/contaminant")) %>%
   mutate(category = ifelse(control, "control", category)) %>%
   mutate(category = replace_na(category, "unmapped")) %>%
   mutate(category = factor(category, levels = rev(c("expected species", "control", "unexpected/contaminant", "unmapped")))) %>%
   mutate(id = fct_rev(id)) %>%
   mutate(sequences = (assigned / sampled) * sequences / 1e6) %>%
-  mutate(transparency = pmax(1.5 - `assigned error rate`, 0, na.rm = TRUE)) %>%
-  mutate(transparency = ifelse(category == "unmapped", max(transparency), transparency)) %>%
+  mutate(bounded_error_rate = pmin(`assigned error rate`, upper_error_rate, na.rm = TRUE)) %>%
+  mutate(bounded_error_rate = pmax(bounded_error_rate, lower_error_rate, na.rm = TRUE)) %>%
+  mutate(bounded_error_rate = ifelse(category == "unmapped", lower_error_rate, bounded_error_rate)) %>%
   arrange(id, category, desc(sequences)) %>%
   mutate(group = row_number()) %>%
-  ggplot(aes(x = id, y = sequences, group = group, fill = category, alpha = transparency)) +
+  ggplot(aes(x = id, y = sequences, group = group, fill = category, alpha = -bounded_error_rate)) +
   geom_col(colour = "grey30", width = 0.6) +
   scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05)), labels = scales::comma) +
   scale_fill_manual(values = c("grey97", "red", "goldenrod1", "green"), drop = FALSE, guide = guide_legend(reverse = TRUE)) +
