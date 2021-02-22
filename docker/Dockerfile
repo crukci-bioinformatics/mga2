@@ -1,4 +1,4 @@
-FROM rust:1.49-slim-buster
+FROM rust:1.50-slim-buster
 
 MAINTAINER Matt Eldridge "matthew.eldridge@cruk.cam.ac.uk" \
            version "2.0.0" \
@@ -21,7 +21,7 @@ COPY conda.yml .
 
 RUN conda env update -n root -f conda.yml && conda clean -a
 
-ENV R_VERSION=4.0.3
+ENV R_VERSION=4.0.4
 
 RUN curl -O https://cdn.rstudio.com/r/debian-10/pkgs/r-${R_VERSION}_1_amd64.deb && \
     gdebi -n r-${R_VERSION}_1_amd64.deb && \
