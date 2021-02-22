@@ -313,6 +313,8 @@ fn write_fastq(writer: &mut dyn Write, record: &FastqRecord) -> Result<()> {
     Ok(())
 }
 
+const FASTA_WIDTH: usize = 80;
+
 fn write_fasta(writer: &mut dyn Write, record: &FastqRecord) -> Result<()> {
     writer.write_all(b">")?;
     writer.write_all(record.id.as_bytes())?;
@@ -325,9 +327,9 @@ fn write_fasta(writer: &mut dyn Write, record: &FastqRecord) -> Result<()> {
     let length = sequence.len();
     let mut position = 0;
     while position < length {
-        writer.write_all(&sequence[position..length.min(position + 80)])?;
-        position += 80;
+        writer.write_all(&sequence[position..length.min(position + FASTA_WIDTH)])?;
+        writer.write_all(b"\n")?;
+        position += FASTA_WIDTH;
     }
-    writer.write_all(record.seq.as_bytes())?;
     Ok(())
 }
