@@ -3,6 +3,7 @@ use log::info;
 use mga2::fastq::{create_fastq_reader, create_fastq_writer, FastqRecord};
 use rand::{thread_rng, Rng};
 use serde::Serialize;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -36,6 +37,10 @@ struct Config {
     // Prepend dataset identifier to record identifier
     #[structopt(short, long)]
     prepend_id: bool,
+
+    // Check record identifiers are unique
+    #[structopt(long)]
+    check_unique_record_ids: bool,
 
     /// Summary of the numbers of records read and sampled
     #[structopt(short, long)]
@@ -82,6 +87,10 @@ fn main() -> Result<()> {
 
     if let Some(summary_file) = config.summary_file {
         write_summary(&config.id, total, records.len() as u32, &summary_file)?;
+    }
+
+    if config.check_unique_record_ids {
+        check_unique_record_ids(&records)?;
     }
 
     Ok(())
@@ -209,5 +218,16 @@ fn write_summary(
         )
     })?;
 
+    Ok(())
+}
+
+fn check_unique_record_ids(records: &[FastqRecord]) -> Result<()> {
+    let mut ids = HashSet::new();
+    for record in records {
+        if ids.contains(&record.id) {
+            bail!("Duplicate record identifiers found among sampled records");
+        }
+        ids.insert(record.id.clone());
+    }
     Ok(())
 }
