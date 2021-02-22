@@ -222,6 +222,7 @@ fn write_summary(
 }
 
 fn check_unique_record_ids(records: &[FastqRecord]) -> Result<()> {
+    info!("Checking sampled records have unique identifiers");
     let mut ids = HashSet::new();
     for record in records {
         if ids.contains(&record.id) {
