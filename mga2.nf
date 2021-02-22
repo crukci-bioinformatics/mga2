@@ -151,6 +151,7 @@ process sample_fastq {
             --prepend-id \
             --output-file="${id_prefix}.sample.fq" \
             --summary-file="${id_prefix}.summary.csv" \
+            --check-unique-record-ids \
             ${fastq}
         """
 }
@@ -161,7 +162,8 @@ process trim_and_split {
         path fastq
 
     output:
-        path 'chunk.*.fq'
+        path 'chunk.*.fq', emit: fastq
+        path 'chunk.*.fa', emit: fasta
 
     script:
         """
@@ -171,6 +173,7 @@ process trim_and_split {
             --output-prefix=chunk \
             --start=${params.trimStart} \
             --length=${params.trimLength} \
+            --output-fasta \
             ${fastq}
         """
 }
@@ -196,7 +199,7 @@ process bowtie {
             --time \
             --best \
             --chunkmbs 256 \
-            ${bowtie_index_dir}/${genome} \
+            -x ${bowtie_index_dir}/${genome} \
             ${trimmed_fastq} \
         | sed "s/^/${genome}\t/" \
         >> "${prefix}.${genome}.bowtie.txt"
@@ -277,7 +280,7 @@ workflow {
         .map { "${it.name}".replaceFirst(/.rev.1.ebwt$/, "") }
 
     bowtie(
-        trim_and_split.out,
+        trim_and_split.out.fastq,
         bowtie_index_dir,
         genomes
     )
