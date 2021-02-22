@@ -33,7 +33,7 @@ RUN R -e 'install.packages("tidyverse", repos = "https://cloud.r-project.org")'
 
 RUN R -e 'install.packages("optparse", repos = "https://cloud.r-project.org")'
 
+ADD "https://api.github.com/repos/crukci-bioinformatics/mga2/commits?per_page=1" /opt/mga2_latest_commit
 RUN git clone https://github.com/crukci-bioinformatics/mga2 /opt/mga2 && \
     cargo install --path /opt/mga2
-
 
