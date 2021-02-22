@@ -27,12 +27,21 @@ struct Config {
     /// The maximum length of trimmed sequences
     #[structopt(short, long)]
     length: Option<usize>,
+
+    /// Output FASTA files in addition to FASTQ chunks
+    /// (note that these will not be trimmed)
+    #[structopt(long)]
+    output_fasta: bool,
 }
 
 fn main() -> Result<()> {
     env_logger::init();
 
     let config = Config::from_args();
+
+    if config.fastq_files.is_empty() {
+        bail!("No input FASTQ files specified");
+    }
 
     if config.chunk_size == 0 {
         bail!("Invalid chunk size");
@@ -56,6 +65,7 @@ fn main() -> Result<()> {
         config.chunk_size,
         config.start,
         config.length,
+        config.output_fasta,
     )?;
 
     Ok(())
@@ -67,15 +77,28 @@ fn trim_and_split(
     chunk_size: u32,
     start: Option<usize>,
     length: Option<usize>,
+    output_fasta: bool,
 ) -> Result<()> {
     let mut count = 0;
     let mut filtered_count = 0;
 
     let mut output_file_count = 1;
+
     let output_fastq_file = format!("{}.{}.fq", output_prefix, output_file_count);
+    let output_fasta_file = format!("{}.{}.fa", output_prefix, output_file_count);
+
     info!("Creating {}", output_fastq_file);
     let output_fastq_path = Some(PathBuf::from(output_fastq_file));
     let mut fastq_writer = create_fastq_writer(&output_fastq_path)?;
+
+    let mut fasta_writer = if output_fasta {
+        info!("Creating {}", output_fasta_file);
+        let output_fasta_path = Some(PathBuf::from(output_fasta_file));
+        Some(create_fastq_writer(&output_fasta_path)?)
+    } else {
+        None
+    };
+
     let mut chunk_count = 0;
 
     for fastq_file in fastq_files {
@@ -90,12 +113,29 @@ fn trim_and_split(
             // check whether we need to create a new chunk file
             if chunk_count > 0 && chunk_count % chunk_size == 0 {
                 fastq_writer.flush()?;
+                if let Some(ref mut fasta_writer) = fasta_writer {
+                    fasta_writer.flush()?
+                }
+
                 output_file_count += 1;
+
                 let output_fastq_file = format!("{}.{}.fq", output_prefix, output_file_count);
+                let output_fasta_file = format!("{}.{}.fa", output_prefix, output_file_count);
+
                 info!("Creating {}", output_fastq_file);
                 let output_fastq_path = Some(PathBuf::from(output_fastq_file));
                 fastq_writer = create_fastq_writer(&output_fastq_path)?;
+
+                fasta_writer = if output_fasta {
+                    info!("Creating {}", output_fasta_file);
+                    let output_fasta_path = Some(PathBuf::from(output_fasta_file));
+                    Some(create_fastq_writer(&output_fasta_path)?)
+                } else {
+                    None
+                };
             }
+
+            let untrimmed_record = record.clone();
 
             match length {
                 Some(length) => match start {
@@ -114,6 +154,9 @@ fn trim_and_split(
             } else {
                 chunk_count += 1;
                 fastq_writer.write_fastq(&record)?;
+                if let Some(ref mut fasta_writer) = fasta_writer {
+                    fasta_writer.write_fasta(&untrimmed_record)?;
+                }
             }
 
             count += 1;
