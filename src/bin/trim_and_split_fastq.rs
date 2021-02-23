@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use log::{info, warn};
+use log::info;
 use mga2::fastq::{create_fastq_reader, create_fastq_writer, FastqRecord};
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -80,20 +80,21 @@ fn trim_and_split(
     output_fasta: bool,
 ) -> Result<()> {
     let mut count = 0;
-    let mut filtered_count = 0;
 
     let mut output_file_count = 1;
+    info!("Creating chunk {}", output_file_count);
 
-    let output_fastq_file = format!("{}.{}.fq", output_prefix, output_file_count);
-    let output_fasta_file = format!("{}.{}.fa", output_prefix, output_file_count);
-
-    info!("Creating {}", output_fastq_file);
-    let output_fastq_path = Some(PathBuf::from(output_fastq_file));
+    let output_fastq_path = Some(PathBuf::from(format!(
+        "{}.{}.fq",
+        output_prefix, output_file_count
+    )));
     let mut fastq_writer = create_fastq_writer(&output_fastq_path)?;
 
     let mut fasta_writer = if output_fasta {
-        info!("Creating {}", output_fasta_file);
-        let output_fasta_path = Some(PathBuf::from(output_fasta_file));
+        let output_fasta_path = Some(PathBuf::from(format!(
+            "{}.{}.fa",
+            output_prefix, output_file_count
+        )));
         Some(create_fastq_writer(&output_fasta_path)?)
     } else {
         None
@@ -118,45 +119,43 @@ fn trim_and_split(
                 }
 
                 output_file_count += 1;
+                info!("Creating chunk {}", output_file_count);
 
-                let output_fastq_file = format!("{}.{}.fq", output_prefix, output_file_count);
-                let output_fasta_file = format!("{}.{}.fa", output_prefix, output_file_count);
-
-                info!("Creating {}", output_fastq_file);
-                let output_fastq_path = Some(PathBuf::from(output_fastq_file));
+                let output_fastq_path = Some(PathBuf::from(format!(
+                    "{}.{}.fq",
+                    output_prefix, output_file_count
+                )));
                 fastq_writer = create_fastq_writer(&output_fastq_path)?;
 
                 fasta_writer = if output_fasta {
-                    info!("Creating {}", output_fasta_file);
-                    let output_fasta_path = Some(PathBuf::from(output_fasta_file));
+                    let output_fasta_path = Some(PathBuf::from(format!(
+                        "{}.{}.fa",
+                        output_prefix, output_file_count
+                    )));
                     Some(create_fastq_writer(&output_fasta_path)?)
                 } else {
                     None
                 };
             }
 
-            let untrimmed_record = record.clone();
+            let mut trimmed_record = record.clone();
 
             match length {
                 Some(length) => match start {
-                    Some(start) => record.trim(start, Some(start + length - 1))?,
-                    None => record.trim_to_length(length)?,
+                    Some(start) => trimmed_record.trim(start, Some(start + length - 1))?,
+                    None => trimmed_record.trim_to_length(length)?,
                 },
                 None => {
                     if let Some(start) = start {
-                        record.trim(start, None)?;
+                        trimmed_record.trim(start, None)?;
                     }
                 }
             }
 
-            if record.seq.is_empty() {
-                filtered_count += 1;
-            } else {
-                chunk_count += 1;
-                fastq_writer.write_fastq(&record)?;
-                if let Some(ref mut fasta_writer) = fasta_writer {
-                    fasta_writer.write_fasta(&untrimmed_record)?;
-                }
+            chunk_count += 1;
+            fastq_writer.write_fastq(&trimmed_record)?;
+            if let Some(ref mut fasta_writer) = fasta_writer {
+                fasta_writer.write_fasta(&record)?;
             }
 
             count += 1;
@@ -170,15 +169,9 @@ fn trim_and_split(
         info!("{}", count);
     }
 
-    info!(
-        "{} of {} records filtered after trimming",
-        filtered_count, count
-    );
-
     fastq_writer.flush()?;
-
-    if filtered_count == count {
-        warn!("No sequences remain after trimming and zero-length sequences filtered");
+    if let Some(ref mut fasta_writer) = fasta_writer {
+        fasta_writer.flush()?;
     }
 
     Ok(())
