@@ -234,21 +234,22 @@ process exonerate {
         path adapters_fasta
 
     output:
-        path "${prefix}.adapters.txt"
+        path "${prefix}.adapter_alignments.txt"
 
     script:
         prefix=fasta.baseName
         """
-        echo "read	start	end	strand	adapter	adapter_start	adapter_end	adapter_strand	percent_identity	score" > ${prefix}.adapters.txt
+        echo "read	start	end	strand	adapter	adapter start	adapter end	adapter strand	percent identity	score" > ${prefix}.adapter_alignments.txt
         exonerate \
             --model ungapped \
             --showalignment no \
             --showvulgar no \
             --verbose 0 \
+            --bestn 1 \
             --ryo "%qi\t%qab\t%qae\t%qS\t%ti\t%tab\t%tae\t%tS\t%pi\t%s\n" \
             ${fasta} \
             ${adapters_fasta} \
-        >> "${prefix}.adapters.txt"
+        >> "${prefix}.adapter_alignments.txt"
         """
 }
 
@@ -260,12 +261,14 @@ process summary {
         path samples
         path counts
         path alignments
+        path adapter_alignments
 
     output:
         path "${params.outputPrefix}sequence_counts.csv"
         path "${params.outputPrefix}alignments.txt"
         path "${params.outputPrefix}summary.csv"
         path "${params.outputPrefix}bar_chart.pdf"
+        //path "${params.outputPrefix}adapter_alignments.txt"
 
     script:
         """
@@ -325,12 +328,13 @@ workflow {
         adapters_fasta
     )
 
-    adapters = exonerate.out.collectFile(name: "adapters.txt", keepHeader: true)
+    adapter_alignments = exonerate.out.collectFile(name: "adapter_alignments.txt", keepHeader: true)
 
     summary(
         check_inputs.out,
         counts,
-        alignments
+        alignments,
+        adapter_alignments
     )
 }
 
