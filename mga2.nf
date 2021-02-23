@@ -12,6 +12,7 @@ def defaults = [
     trimStart: 11,
     trimLength: 36,
     bowtieIndexDir: "bowtie_indexes",
+    adaptersFasta: "${projectDir}/resources/adapters.fa",
     outputDir: "${launchDir}",
     outputPrefix: ""
 ]
@@ -28,6 +29,7 @@ params.chunkSize = defaults.chunkSize
 params.trimStart = defaults.trimStart
 params.trimLength = defaults.trimLength
 params.bowtieIndexDir = defaults.bowtieIndexDir
+params.adaptersFasta = defaults.adaptersFasta
 params.outputDir = defaults.outputDir
 params.outputPrefix = defaults.outputPrefix
 
@@ -52,6 +54,7 @@ Options:
     --trim-start INTEGER              The position at which the trimmed sequence starts, all bases before this position are trimmed (default: ${defaults.trimStart})
     --trim-length INTEGER             The maximum length of the trimmed sequence (default: ${defaults.trimLength})
     --bowtie-index-dir PATH           Directory containing bowtie indexes for reference genomes (default: ${defaults.bowtieIndexDir})
+    --adapters-fasta FILE                   FASTA file containing adapter sequences (default: ${defaults.adaptersFasta})
     --output-dir PATH                 Output directory (default: ${defaults.outputDir})
     --output-prefix PREFIX            Prefix for output files (default: ${defaults.outputPrefix})
     """
@@ -73,6 +76,7 @@ Chunk size             : $params.chunkSize
 Trim start             : $params.trimStart
 Trim length            : $params.trimLength
 Bowtie index directory : $params.bowtieIndexDir
+Adapters FASTA file    : $params.adaptersFasta
 Output directory       : $params.outputDir
 Output prefix          : $params.outputPrefix
 """
@@ -128,6 +132,21 @@ int minimumSequenceLength = trimStart + trimLength - 1
 
 // enable DSL 2 syntax
 nextflow.enable.dsl = 2
+
+
+process check_inputs {
+    input:
+        path samples
+        path genome_details
+
+    output:
+        path 'samples.csv'
+
+    script:
+        """
+        Rscript ${projectDir}/R/check_inputs.R ${samples} ${genome_details} samples.csv
+        """
+}
 
 
 process sample_fastq {
@@ -188,13 +207,13 @@ process bowtie {
         each genome
 
     output:
-        path "${prefix}.${genome}.bowtie.txt"
+        path "${prefix}.${genome}.txt"
 
     script:
         prefix=trimmed_fastq.baseName
         """
         set -eo pipefail
-        echo "genome	read	strand	chromosome	position	sequence	quality	num	mismatches" > ${prefix}.${genome}.bowtie.txt
+        echo "genome	read	strand	chromosome	position	sequence	quality	num	mismatches" > ${prefix}.${genome}.txt
         bowtie \
             --time \
             --best \
@@ -202,7 +221,34 @@ process bowtie {
             -x ${bowtie_index_dir}/${genome} \
             ${trimmed_fastq} \
         | sed "s/^/${genome}\t/" \
-        >> "${prefix}.${genome}.bowtie.txt"
+        >> "${prefix}.${genome}.txt"
+        """
+}
+
+
+process exonerate {
+    tag "${prefix}"
+
+    input:
+        each path(fasta)
+        path adapters_fasta
+
+    output:
+        path "${prefix}.adapters.txt"
+
+    script:
+        prefix=fasta.baseName
+        """
+        echo "read	start	end	strand	adapter	adapter_start	adapter_end	adapter_strand	percent_identity	score" > ${prefix}.adapters.txt
+        exonerate \
+            --model ungapped \
+            --showalignment no \
+            --showvulgar no \
+            --verbose 0 \
+            --ryo "%qi\t%qab\t%qae\t%qS\t%ti\t%tab\t%tae\t%tS\t%pi\t%s\n" \
+            ${fasta} \
+            ${adapters_fasta} \
+        >> "${prefix}.adapters.txt"
         """
 }
 
@@ -231,21 +277,6 @@ process summary {
             --output-alignments="${params.outputPrefix}alignments.txt" \
             --output-summary="${params.outputPrefix}summary.csv" \
             --output-plot="${params.outputPrefix}bar_chart.pdf"
-        """
-}
-
-
-process check_inputs {
-    input:
-        path samples
-        path genome_details
-
-    output:
-        path 'samples.csv'
-
-    script:
-        """
-        Rscript ${projectDir}/R/check_inputs.R ${samples} ${genome_details} samples.csv
         """
 }
 
@@ -285,7 +316,16 @@ workflow {
         genomes
     )
 
-    alignments = bowtie.out.collectFile(name: "bowtie_alignments.txt", keepHeader: true)
+    alignments = bowtie.out.collectFile(name: "alignments.txt", keepHeader: true)
+
+    adapters_fasta = channel.fromPath("${params.adaptersFasta}", checkIfExists: true)
+
+    exonerate(
+        trim_and_split.out.fasta,
+        adapters_fasta
+    )
+
+    adapters = exonerate.out.collectFile(name: "adapters.txt", keepHeader: true)
 
     summary(
         check_inputs.out,
