@@ -254,7 +254,7 @@ process exonerate {
 }
 
 
-process summary {
+process create_summary {
     publishDir "${params.outputDir}", mode: 'copy'
 
     input:
@@ -265,10 +265,10 @@ process summary {
 
     output:
         path "${params.outputPrefix}sequence_counts.csv"
-        path "${params.outputPrefix}alignments.txt"
         path "${params.outputPrefix}summary.csv"
-        path "${params.outputPrefix}bar_chart.pdf"
-        //path "${params.outputPrefix}adapter_alignments.txt"
+        path "${params.outputPrefix}bar_charts.pdf"
+        path "${params.outputPrefix}alignments.txt"
+        path "${params.outputPrefix}adapter_alignments.txt"
 
     script:
         """
@@ -276,10 +276,8 @@ process summary {
             --samples=${samples} \
             --counts=${counts} \
             --alignments=${alignments} \
-            --output-counts="${params.outputPrefix}sequence_counts.csv" \
-            --output-alignments="${params.outputPrefix}alignments.txt" \
-            --output-summary="${params.outputPrefix}summary.csv" \
-            --output-plot="${params.outputPrefix}bar_chart.pdf"
+            --adapter-alignments=${adapter_alignments} \
+            --output-prefix="${params.outputPrefix}"
         """
 }
 
@@ -330,7 +328,7 @@ workflow {
 
     adapter_alignments = exonerate.out.collectFile(name: "adapter_alignments.txt", keepHeader: true)
 
-    summary(
+    create_summary(
         check_inputs.out,
         counts,
         alignments,
