@@ -62,6 +62,6 @@ if (nrow(duplicate_synonyms) > 0) {
 
 samples %>%
   left_join(synonyms, by = c("species" = "synonym")) %>%
-  left_join(select(synonyms, control = synonym, control_genome = genome), by = "control") %>%
+  left_join(select(synonyms, control = synonym, `control genome` = genome), by = "control") %>%
   mutate(id_prefix = row_number()) %>%
   write_csv(output_file)
