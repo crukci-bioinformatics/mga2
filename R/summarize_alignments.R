@@ -10,7 +10,10 @@ option_list <- list(
 
   make_option(c("--alignments"), dest = "alignments_file",
               help = "Alignments file with collated output from bowtie with genome, read, strand, chromosome, position, sequence, quality, num and mismatch columns"),
-
+  
+  make_option(c("--adapters"), dest = "adapters_file",
+              help = "Adapter alignments file with collated output from exonerate with read, start, end, strand, adapter, adapter_start, adapter_end, adapter_strand, percent_identity and score columns"),
+  
   make_option(c("--output-counts"), dest = "output_counts_file",
               help = "Output file containing summary of sequence counts"),
   
@@ -34,6 +37,7 @@ opt <- parse_args(option_parser, args)
 samples_file <- opt$samples_file
 counts_file <- opt$counts_file
 alignments_file <- opt$alignments_file
+adapters_file <- opt$adapters_file
 output_counts_file <- opt$output_counts_file
 output_alignments_file <- opt$output_alignments_file
 output_summary_file <- opt$output_summary_file
@@ -42,6 +46,7 @@ output_plot_file <- opt$output_plot_file
 if (is.null(samples_file)) stop("Samples file must be specified")
 if (is.null(counts_file)) stop("Sequence counts file must be specified")
 if (is.null(alignments_file)) stop("Alignments file must be specified")
+if (is.null(adapters_file)) stop("Adapter alignments file must be specified")
 
 if (is.null(output_counts_file)) output_counts_file <- "mga.sequence_counts.csv"
 if (is.null(output_alignments_file)) output_alignments_file <- "mga.alignments.txt"
@@ -52,7 +57,7 @@ suppressPackageStartupMessages(library(tidyverse))
 
 # read sample sheet
 samples <- read_csv(samples_file, col_types = cols(.default = col_character()))
-missing_columns <- setdiff(c("id", "fastq", "species", "genome", "control_genome", "id_prefix"), colnames(samples))
+missing_columns <- setdiff(c("id", "fastq", "species", "genome", "control genome", "id_prefix"), colnames(samples))
 if (length(missing_columns) > 0) {
   stop("Missing columns in ", samples_file, " (", str_c(missing_columns, collapse = ", "), ")")
 }
@@ -81,7 +86,7 @@ if (nrow(missing_counts) > 0) {
 
 # output sequence counts file
 samples %>%
-  select(id, fastq, species, genome, control, control_genome, sequences, sampled) %>%
+  select(id, fastq, species, genome, control, `control genome`, sequences, sampled) %>%
   write_csv(output_counts_file)
 
 # read bowtie alignment output
@@ -115,7 +120,7 @@ expected_genomes <- samples %>%
   filter(!is.na(genome)) %>%
   mutate(expected = TRUE)
 control_genomes <- samples %>%
-  select(id, genome = control_genome) %>%
+  select(id, genome = `control genome`) %>%
   filter(!is.na(genome)) %>%
   mutate(control = TRUE)
 alignments <- alignments %>%
@@ -192,6 +197,14 @@ summary %>%
   arrange(id, is.na(expected), desc(assigned)) %>%
   mutate(across(where(is.logical), ifelse, "yes", "no")) %>%
   write_csv(output_summary_file, na = "")
+
+# adapter alignments
+adapter_alignments <- read_tsv(adapters_file, col_types = "ciicciicdi")
+alignment_columns <- c("genome", "read", "strand", "chromosome", "position", "sequence", "quality", "num", "mismatches")
+missing_columns <- setdiff(alignment_columns, colnames(alignments))
+if (length(missing_columns) > 0) {
+  stop("Missing columns in ", alignments_file, " (", str_c(missing_columns, collapse = ", "), ")")
+}
 
 # stacked bar plot
 lower_error_rate <- 0.5
