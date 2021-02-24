@@ -26,7 +26,7 @@ if (nlevels(samples$id) != nrow(samples)) {
 
 # read genomes file
 genomes <- read_csv(genomes_file, col_types = cols(.default = col_character()))
-missing_columns <- setdiff(c("genome", "species"), colnames(genomes))
+missing_columns <- setdiff(c("genome", "species", "synonyms"), colnames(genomes))
 if (length(missing_columns) > 0) {
   stop("Missing columns in ", genomes_file, " (", str_c(missing_columns, collapse = ", "), ")")
 }
@@ -65,3 +65,4 @@ samples %>%
   left_join(select(synonyms, control = synonym, `control genome` = genome), by = "control") %>%
   mutate(id_prefix = row_number()) %>%
   write_csv(output_file)
+
