@@ -140,14 +140,15 @@ process check_inputs {
     input:
         path samples
         path genome_details
-        path genome_list
+        path bowtie_index_list
 
     output:
-        path 'samples.validated.csv'
+        path 'samples.checked.csv', emit: samples
+        path 'genomes.checked.csv', emit: genomes
 
     script:
         """
-        Rscript ${projectDir}/R/check_inputs.R ${samples} ${genome_details} samples.validated.csv
+        Rscript ${projectDir}/R/check_inputs.R ${samples} ${genome_details} ${bowtie_index_list} samples.checked.csv genomes.checked.csv
         """
 }
 
@@ -156,23 +157,23 @@ process sample_fastq {
     tag "${id}"
 
     input:
-        tuple val(id_prefix), val(id), path(fastq), val(fastq_pattern)
+        tuple val(prefix), val(id), path(fastq), val(fastq_pattern)
 
     output:
-        path "${id_prefix}.sample.fq", emit: fastq
-        path "${id_prefix}.summary.csv", emit: summary
+        path "${prefix}.sample.fq", emit: fastq
+        path "${prefix}.summary.csv", emit: summary
 
     script:
         """
         RUST_LOG=info \
         sample-fastq \
-            --id="${id_prefix}" \
+            --id="${prefix}" \
             --sample-size=${params.sampleSize} \
             --max-number-to-sample-from=${params.maxNumberToSampleFrom} \
             --min-sequence-length=${minimumSequenceLength} \
             --prepend-id \
-            --output-file="${id_prefix}.sample.fq" \
-            --summary-file="${id_prefix}.summary.csv" \
+            --output-file="${prefix}.sample.fq" \
+            --summary-file="${prefix}.summary.csv" \
             --check-unique-record-ids \
             ${fastq}
         """
@@ -268,8 +269,7 @@ process create_summary {
 
     input:
         path samples
-        path genome_list
-        path genome_details
+        path genomes
         path counts
         path alignments
         path adapter_alignments
@@ -285,6 +285,7 @@ process create_summary {
         """
         Rscript ${projectDir}/R/summarize_alignments.R \
             --samples=${samples} \
+            --genomes=${genomes} \
             --counts=${counts} \
             --alignments=${alignments} \
             --adapter-alignments=${adapter_alignments} \
@@ -305,19 +306,19 @@ workflow {
         .fromPath("${params.bowtieIndexDir}/*.rev.1.ebwt", checkIfExists: true)
         .map { "${it.name}".replaceFirst(/.rev.1.ebwt$/, "") }
 
-    genome_list = genomes.collectFile(name: "genome_list.txt", newLine: true)
+    bowtie_index_list = genomes.collectFile(name: "bowtie_index_list.txt", newLine: true)
 
     check_inputs(
         samples,
         genome_details,
-        genome_list,
+        bowtie_index_list
     )
 
     adapters_fasta = channel.fromPath("${params.adaptersFasta}", checkIfExists: true)
 
-    fastq = check_inputs.out
+    fastq = check_inputs.out.samples
         .splitCsv(header: true, quote: '"')
-        .map { row -> tuple("${row.id_prefix}", "${row.id}", file("${fastqDir}${row.fastq}", checkIfExists: true), "${fastqDir}${row.fastq}") }
+        .map { row -> tuple("${row.rownum}", "${row.id}", file("${fastqDir}${row.fastq}", checkIfExists: true), "${fastqDir}${row.fastq}") }
 
     fastq.subscribe { assert !it[2].isEmpty(), "No FASTQ files found for ${it[1]} matching pattern ${it[3]}" }
 
@@ -344,9 +345,8 @@ workflow {
     adapter_alignments = exonerate.out.collectFile(name: "adapter_alignments.collected.txt", keepHeader: true)
 
     create_summary(
-        check_inputs.out,
-        genome_list,
-        genome_details,
+        check_inputs.out.samples,
+        check_inputs.out.genomes,
         counts,
         alignments,
         adapter_alignments

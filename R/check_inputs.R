@@ -138,11 +138,12 @@ synonyms <- genome_details %>%
 
 # add unique numeric id to be used in labeling sampled reads
 samples <- samples %>%
-  mutate(id_prefix = row_number())
+  mutate(rownum = row_number()) %>%
+  select(rownum, everything())
 
 # find matching genomes
 species <- samples %>%
-  select(id_prefix, species) %>%
+  select(rownum, species) %>%
   separate_rows(species, sep = "\\|") %>%
   drop_na() %>%
   mutate(synonym = str_to_lower(str_trim(species)))
@@ -157,11 +158,11 @@ if (length(non_matching) > 0) {
 
 genomes <- species %>%
   inner_join(synonyms, by = "synonym") %>%
-  select(id_prefix, genome)
+  select(rownum, genome)
 
 # find matching control genomes
 controls <- samples %>%
-  select(id_prefix, controls) %>%
+  select(rownum, controls) %>%
   separate_rows(controls, sep = "\\|") %>%
   drop_na() %>%
   mutate(synonym = str_to_lower(str_trim(controls)))
@@ -176,24 +177,24 @@ if (length(non_matching) > 0) {
 
 control_genomes <- controls %>%
   inner_join(synonyms, by = "synonym") %>%
-  select(id_prefix, genome)
+  select(rownum, genome)
 
 # remove genome matches if these also match as a control
-genomes <- anti_join(genomes, control_genomes, by = c("id_prefix", "genome"))
+genomes <- anti_join(genomes, control_genomes, by = c("rownum", "genome"))
 
 # collapse multiple genomes for the same sample/dataset
 genomes <- genomes %>%
-  group_by(id_prefix) %>%
+  group_by(rownum) %>%
   summarize(genomes = str_c(genome, collapse = "|"), .groups = "drop")
 
 control_genomes <- control_genomes %>%
-  group_by(id_prefix) %>%
+  group_by(rownum) %>%
   summarize(control_genomes = str_c(genome, collapse = "|"), .groups = "drop")
 
 # append matching genomes and control genomes
 samples <- samples %>%
-  left_join(genomes, by = "id_prefix") %>%
-  left_join(control_genomes, by = "id_prefix")
+  left_join(genomes, by = "rownum") %>%
+  left_join(control_genomes, by = "rownum")
 
 # write new sample sheet
 write_csv(samples, output_samples_file, na = "")
