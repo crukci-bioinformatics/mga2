@@ -1,53 +1,80 @@
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) < 3)
+if (length(args) < 4)
 {
-  stop('Usage: Rscript check_inputs.R samples_file genomes_file genome_list_file output_file')
+  stop('Usage: Rscript check_inputs.R samples_file genome_details_file bowtie_index_list_file output_file')
 }
 
-args <- c("samplesheet.csv", "genomes.csv", "genome_list.txt", "samples.validated.csv")
-
 samples_file <- args[1]
-genomes_file <- args[2]
-genome_list_file <- args[3]
+genome_details_file <- args[2]
+bowtie_index_list_file <- args[3]
 output_file <- args[4]
 
 suppressPackageStartupMessages(library(tidyverse))
 
 # read sample sheet
 samples <- read_csv(samples_file, col_types = cols(.default = col_character()))
-missing_columns <- setdiff(c("id", "fastq", "species", "control"), colnames(samples))
+expected_columns <- c("id", "fastq", "species", "control")
+missing_columns <- setdiff(expected_columns, colnames(samples))
 if (length(missing_columns) > 0) {
-  stop("Missing columns in ", samples_file, " (", str_c(missing_columns, collapse = ", "), ")")
+  stop("missing columns found in ", samples_file, ": '", str_c(missing_columns, collapse = "', '"), "'")
 }
-samples <- mutate(samples, id = as_factor(id))
+samples <- select(samples, all_of(expected_columns))
 if (nrow(filter(samples, is.na(samples$id))) > 0) {
-  stop("Missing sample identifiers")
+  stop("missing ids found in ", samples_file)
 }
-if (nlevels(samples$id) != nrow(samples)) {
-  stop("Duplicate sample identifiers")
+duplicates <- samples %>%
+  count(id) %>%
+  filter(n > 1) %>%
+  pull(id)
+if (length(duplicates) > 0) {
+  stop("duplicate ids found in ", samples_file, ": '", str_c(duplicates, collapse = "', '"), "'")
 }
 
-# read genomes file
-genomes <- read_csv(genomes_file, col_types = cols(.default = col_character()))
-missing_columns <- setdiff(c("genome", "species", "synonyms"), colnames(genomes))
+# read genome details file
+genome_details <- read_csv(genome_details_file, col_types = cols(.default = col_character()))
+expected_columns <- c("genome", "species", "synonyms")
+missing_columns <- setdiff(expected_columns, colnames(genome_details))
 if (length(missing_columns) > 0) {
-  stop("Missing columns in ", genomes_file, " (", str_c(missing_columns, collapse = ", "), ")")
+  stop("missing columns found in ", genome_details_file, ": '", str_c(missing_columns, collapse = "', '"), "'")
+}
+genome_details <- select(genome_details, all_of(expected_columns))
+if (nrow(filter(genome_details, is.na(genome_details$genome))) > 0) {
+  stop("missing genome ids found in ", genome_details_file)
+}
+duplicates <- genome_details %>%
+  count(genome) %>%
+  filter(n > 1) %>%
+  pull(genome)
+if (length(duplicates) > 0) {
+  stop("duplicate genome ids found in ", genome_details_file, ": '", str_c(duplicates, collapse = "', '"), "'")
+}
+duplicates <- genome_details %>%
+  mutate(genome_lower_case = str_to_lower(genome)) %>%
+  add_count(genome_lower_case) %>%
+  filter(n > 1) %>%
+  arrange(genome_lower_case, genome) %>%
+  pull(genome)
+if (length(duplicates) > 0) {
+  stop("genome ids differing only by case found in ", genome_details_file, ": '", str_c(duplicates, collapse = "', '"), "'")
 }
 
 # read list of genomes with bowtie indexes
-genome_list <- read_tsv(genome_list_file, col_names = "genome", col_types = "c")
+bowtie_index_list <- read_tsv(bowtie_index_list_file, col_names = "genome", col_types = "c") %>%
+  mutate(has_index = TRUE)
 
-# add missing genomes in the genomes file for which we have bowtie indexes
-genomes <- full_join(genomes, genome_list, by = "genome")
+# add missing genomes for which we have bowtie indexes
+genome_details <- genome_details %>%
+  full_join(bowtie_index_list, by = "genome") %>%
+  mutate(has_index = replace_na(has_index, FALSE))
 
 # create synonym lookup table
 synonyms <- bind_rows(
-  genomes %>%
-    select(genome = genome, synonym = genome),
-  genomes %>%
-    select(genome, synonym = species),
-  genomes %>%
-    select(genome, synonym = synonyms) %>%
+  genome_details %>%
+    select(genome = genome, has_index, synonym = genome),
+  genome_details %>%
+    select(genome, has_index, synonym = species),
+  genome_details %>%
+    select(genome, has_index, synonym = synonyms) %>%
     separate_rows(synonym, sep = "\\|")
 ) %>%
   drop_na() %>%
@@ -55,47 +82,63 @@ synonyms <- bind_rows(
   mutate(synonym = str_to_lower(synonym)) %>%
   distinct()
 
-duplicate_synonyms <- synonyms %>%
+duplicates <- synonyms %>%
   count(synonym, name = "count") %>%
-  filter(count > 1)
+  filter(count > 1) %>%
+  pull(synonym)
 
-if (nrow(duplicate_synonyms) > 0) {
-  duplicate_synonyms %>%
-    select(synonym) %>%
-    left_join(synonyms, by = "synonym") %>%
-    left_join(genomes, by = "genome") %>%
-    arrange(synonym, genome) %>%
-    print(n = Inf)
-  stop("Error: ", genomes_file, " contains the same synonym(s) for more than one genome")
+if (length(duplicates) > 0) {
+  stop("synonyms matching (case-insensitive) more than one genome found in ", genome_details_file, ": '", str_c(duplicates, collapse = "', '"), "'")
 }
 
-# match species and controls to genomes
-samples <- samples %>%
-  left_join(synonyms, by = c("species" = "synonym")) %>%
-  left_join(select(synonyms, control = synonym, `control genome` = genome), by = "control")
+# match species to genomes
+samples <- left_join(samples, synonyms, by = c("species" = "synonym"))
 
 # check for species that don't match to a genome
-non_matching_species <- samples %>%
+unmatched_genome <- samples %>%
   filter(!is.na(species)) %>%
   filter(is.na(genome)) %>%
   distinct(species) %>%
   pull(species)
-if (length(non_matching_species) > 0) {
-  stop("no genome match for the following species: '", str_c(non_matching_species, collapse = "', '"), "'")
+if (length(unmatched_genome) > 0) {
+  stop("no genome match for the following species in ", samples_file, ": '", str_c(unmatched_genome, collapse = "', '"), "'")
 }
 
+# check for matches to genomes for which we don't have a bowtie index
+missing_index <- samples %>%
+  filter(!has_index) %>%
+  distinct(species) %>%
+  pull(species)
+if (length(missing_index) > 0) {
+  stop("missing bowtie index for the following species in ", samples_file, ": '", str_c(missing_index, collapse = "', '"), "'")
+}
+
+# match controls to genomes
+samples <- left_join(samples, select(synonyms, control = synonym, `control genome` = genome, has_control_index = has_index), by = "control")
+
 # check for controls that don't match to a genome
-non_matching_control <- samples %>%
+unmatched_genome <- samples %>%
   filter(!is.na(control)) %>%
   filter(is.na(`control genome`)) %>%
   distinct(control) %>%
   pull(control)
-if (length(non_matching_control) > 0) {
-  stop("no genome match for the following controls: '", str_c(non_matching_control, collapse = "', '"), "'")
+if (length(unmatched_genome) > 0) {
+  stop("no genome match for the following controls in ", samples_file, ": '", str_c(unmatched_genome, collapse = "', '"), "'")
 }
 
-# add unique numeric identifier to be used in labeling sampled reads
+# check for matches to genomes for which we don't have a bowtie index
+missing_index <- samples %>%
+  filter(!has_control_index) %>%
+  distinct(control) %>%
+  pull(control)
+if (length(missing_index) > 0) {
+  stop("missing bowtie index for the following controls in ", samples_file, ": '", str_c(missing_index, collapse = "', '"), "'")
+}
+
+samples <- select(samples, -has_index, -has_control_index)
+
+# add unique numeric id to be used in labeling sampled reads
 samples <- mutate(samples, id_prefix = row_number())
 
 # write new sample sheet
-write_csv(samples, output_file)
+write_csv(samples, output_file, na = "")
