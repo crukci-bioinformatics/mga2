@@ -89,10 +89,12 @@ if (!"${fastqDir}".isEmpty() && !"${fastqDir}".endsWith("/")) {
     fastqDir = "${fastqDir}/"
 }
 
+/*
 if (!"${params.sampleSize}".isInteger() || "${params.sampleSize}" as Integer < 100000) {
     log.error 'Invalid sample size - set to at least the recommended value of 100000'
     exit 1
 }
+*/
 
 if (!"${params.chunkSize}".isInteger() || "${params.chunkSize}" as Integer < 100000) {
     log.error 'Invalid chunk size for batch alignment - set to at least 100000 (recommend 5000000)'
@@ -141,11 +143,11 @@ process check_inputs {
         path genome_list
 
     output:
-        path 'samples.csv'
+        path 'samples.validated.csv'
 
     script:
         """
-        Rscript ${projectDir}/R/check_inputs.R ${samples} ${genome_details} samples.csv
+        Rscript ${projectDir}/R/check_inputs.R ${samples} ${genome_details} samples.validated.csv
         """
 }
 
@@ -231,7 +233,7 @@ process bowtie {
 
 
 process exonerate {
-    tag "${prefix}"
+    tag "${prefix}.adapters"
 
     input:
         each path(fasta)
@@ -303,7 +305,7 @@ workflow {
         .fromPath("${params.bowtieIndexDir}/*.rev.1.ebwt", checkIfExists: true)
         .map { "${it.name}".replaceFirst(/.rev.1.ebwt$/, "") }
 
-    genome_list = genomes.collectFile(name: "genomes.txt", newLine: true)
+    genome_list = genomes.collectFile(name: "genome_list.txt", newLine: true)
 
     check_inputs(
         samples,
