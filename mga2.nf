@@ -54,7 +54,7 @@ Options:
     --trim-start INTEGER              The position at which the trimmed sequence starts, all bases before this position are trimmed (default: ${defaults.trimStart})
     --trim-length INTEGER             The maximum length of the trimmed sequence (default: ${defaults.trimLength})
     --bowtie-index-dir PATH           Directory containing bowtie indexes for reference genomes (default: ${defaults.bowtieIndexDir})
-    --adapters-fasta FILE                   FASTA file containing adapter sequences (default: ${defaults.adaptersFasta})
+    --adapters-fasta FILE             FASTA file containing adapter sequences (default: ${defaults.adaptersFasta})
     --output-dir PATH                 Output directory (default: ${defaults.outputDir})
     --output-prefix PREFIX            Prefix for output files (default: ${defaults.outputPrefix})
     """
@@ -138,6 +138,7 @@ process check_inputs {
     input:
         path samples
         path genome_details
+        path genome_list
 
     output:
         path 'samples.csv'
@@ -202,7 +203,7 @@ process bowtie {
     tag "${prefix}.${genome}"
 
     input:
-        each path(trimmed_fastq)
+        each path(fastq)
         path bowtie_index_dir
         each genome
 
@@ -210,18 +211,21 @@ process bowtie {
         path "${prefix}.${genome}.txt"
 
     script:
-        prefix=trimmed_fastq.baseName
+        prefix=fastq.baseName
         """
         set -eo pipefail
         echo "genome	read	strand	chromosome	position	sequence	quality	num	mismatches" > ${prefix}.${genome}.txt
-        bowtie \
-            --time \
-            --best \
-            --chunkmbs 256 \
-            -x ${bowtie_index_dir}/${genome} \
-            ${trimmed_fastq} \
-        | sed "s/^/${genome}\t/" \
-        >> "${prefix}.${genome}.txt"
+        if [[ `head ${fastq} | wc -l` -gt 0 ]]
+        then
+            bowtie \
+                --time \
+                --best \
+                --chunkmbs 256 \
+                -x ${bowtie_index_dir}/${genome} \
+                ${fastq} \
+            | sed "s/^/${genome}\t/" \
+            >> "${prefix}.${genome}.txt"
+        fi
         """
 }
 
@@ -240,16 +244,19 @@ process exonerate {
         prefix=fasta.baseName
         """
         echo "read	start	end	strand	adapter	adapter start	adapter end	adapter strand	percent identity	score" > ${prefix}.adapter_alignments.txt
-        exonerate \
-            --model ungapped \
-            --showalignment no \
-            --showvulgar no \
-            --verbose 0 \
-            --bestn 1 \
-            --ryo "%qi\t%qab\t%qae\t%qS\t%ti\t%tab\t%tae\t%tS\t%pi\t%s\n" \
-            ${fasta} \
-            ${adapters_fasta} \
-        >> "${prefix}.adapter_alignments.txt"
+        if [[ `head ${fasta} | wc -l` -gt 0 ]]
+        then
+            exonerate \
+                --model ungapped \
+                --showalignment no \
+                --showvulgar no \
+                --verbose 0 \
+                --bestn 1 \
+                --ryo "%qi\t%qab\t%qae\t%qS\t%ti\t%tab\t%tae\t%tS\t%pi\t%s\n" \
+                ${fasta} \
+                ${adapters_fasta} \
+            >> "${prefix}.adapter_alignments.txt"
+        fi
         """
 }
 
@@ -259,6 +266,8 @@ process create_summary {
 
     input:
         path samples
+        path genome_list
+        path genome_details
         path counts
         path alignments
         path adapter_alignments
@@ -288,28 +297,34 @@ workflow {
 
     genome_details = channel.fromPath(params.genomeDetails, checkIfExists: true)
 
-    check_inputs(samples, genome_details)
-
-    fastq = check_inputs.out
-        .splitCsv(header: true, quote: '"')
-        .map { row -> tuple("${row.id_prefix}", "${row.id}", file("${fastqDir}${row.fastq}"), "${fastqDir}${row.fastq}") }
-
-    fastq
-        .filter{ it[2].isEmpty() }
-        .subscribe { log.error "No FASTQ files found for ${it[1]} matching pattern ${it[3]}" }
-
-    sample_fastq(fastq)
-
-    counts = sample_fastq.out.summary
-        .collectFile(name: "sequence_counts.csv", keepHeader: true)
-
-    trim_and_split(sample_fastq.out.fastq.collect())
-
     bowtie_index_dir = channel.fromPath("${params.bowtieIndexDir}", checkIfExists: true)
 
     genomes = channel
         .fromPath("${params.bowtieIndexDir}/*.rev.1.ebwt", checkIfExists: true)
         .map { "${it.name}".replaceFirst(/.rev.1.ebwt$/, "") }
+
+    genome_list = genomes.collectFile(name: "genomes.txt", newLine: true)
+
+    check_inputs(
+        samples,
+        genome_details,
+        genome_list,
+    )
+
+    adapters_fasta = channel.fromPath("${params.adaptersFasta}", checkIfExists: true)
+
+    fastq = check_inputs.out
+        .splitCsv(header: true, quote: '"')
+        .map { row -> tuple("${row.id_prefix}", "${row.id}", file("${fastqDir}${row.fastq}", checkIfExists: true), "${fastqDir}${row.fastq}") }
+
+    fastq.subscribe { assert !it[2].isEmpty(), "No FASTQ files found for ${it[1]} matching pattern ${it[3]}" }
+
+    sample_fastq(fastq)
+
+    counts = sample_fastq.out.summary
+        .collectFile(name: "sequence_counts.collected.csv", keepHeader: true)
+
+    trim_and_split(sample_fastq.out.fastq.collect())
 
     bowtie(
         trim_and_split.out.fastq,
@@ -317,19 +332,19 @@ workflow {
         genomes
     )
 
-    alignments = bowtie.out.collectFile(name: "alignments.txt", keepHeader: true)
-
-    adapters_fasta = channel.fromPath("${params.adaptersFasta}", checkIfExists: true)
+    alignments = bowtie.out.collectFile(name: "alignments.collected.txt", keepHeader: true)
 
     exonerate(
         trim_and_split.out.fasta,
         adapters_fasta
     )
 
-    adapter_alignments = exonerate.out.collectFile(name: "adapter_alignments.txt", keepHeader: true)
+    adapter_alignments = exonerate.out.collectFile(name: "adapter_alignments.collected.txt", keepHeader: true)
 
     create_summary(
         check_inputs.out,
+        genome_list,
+        genome_details,
         counts,
         alignments,
         adapter_alignments
