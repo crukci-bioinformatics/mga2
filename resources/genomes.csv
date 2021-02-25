@@ -9,7 +9,7 @@ ddi.dicty_2.7,Dictyostelium discoideum (slime mold),dictyostelium_discoideum | d
 dme.dm6,Drosophila melanogaster (fruitfly),drosophila_melanogaster | drosophila melanogaster | fruitfly | fruit fly
 dre.GRCz10,Danio rerio (zebrafish),danio_rerio | danio rerio | zebrafish
 ecb.EquCab2,Equus caballus (horse),equus caballus | equus caballus | horse
-eco.HUSEC2011CHR1,Escherichia coli,escherichia_coli | e coli
+eco.HUSEC2011CHR1,Escherichia coli,escherichia_coli | e coli | ecoli
 fca.Felis_catus_6.2,Felis catus (cat),felis_catus | felis catus | cat
 fungi.NCBI,Fungi,
 gga.Gallus_gallus-5.0,Gallus gallus (chicken),gallus_gallus | gallus gallus | chicken
