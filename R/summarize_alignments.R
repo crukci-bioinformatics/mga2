@@ -307,7 +307,7 @@ summary %>%
   mutate(bounded_error_rate = pmin(`assigned error rate`, upper_error_rate, na.rm = TRUE)) %>%
   mutate(bounded_error_rate = pmax(bounded_error_rate, lower_error_rate, na.rm = TRUE)) %>%
   mutate(bounded_error_rate = ifelse(category == "unmapped", lower_error_rate, bounded_error_rate)) %>%
-  arrange(id, category, desc(sequences)) %>%
+  arrange(id, category, sequences) %>%
   mutate(group = row_number()) %>%
   ggplot(aes(x = id, y = sequences, group = group, fill = category, alpha = -bounded_error_rate)) +
   geom_col(colour = "grey30", width = 0.6) +
