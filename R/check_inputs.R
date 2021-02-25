@@ -15,7 +15,7 @@ suppressPackageStartupMessages(library(tidyverse))
 # read sample sheet
 samples <- read_csv(samples_file, col_types = cols(.default = col_character()))
 
-expected_columns <- c("id", "fastq", "species", "control")
+expected_columns <- c("id", "fastq", "species", "controls")
 missing_columns <- setdiff(expected_columns, colnames(samples))
 if (length(missing_columns) > 0) {
   stop("missing columns found in ", samples_file, ": '", str_c(missing_columns, collapse = "', '"), "'")
@@ -161,15 +161,15 @@ genomes <- species %>%
 
 # find matching control genomes
 controls <- samples %>%
-  select(id_prefix, control) %>%
-  separate_rows(control, sep = "\\|") %>%
+  select(id_prefix, controls) %>%
+  separate_rows(controls, sep = "\\|") %>%
   drop_na() %>%
-  mutate(synonym = str_to_lower(str_trim(control)))
+  mutate(synonym = str_to_lower(str_trim(controls)))
 
 non_matching <- controls %>%
   anti_join(synonyms, by = "synonym") %>%
-  distinct(control) %>%
-  pull(control)
+  distinct(controls) %>%
+  pull(controls)
 if (length(non_matching) > 0) {
   message("No genome matches found for the following controls: '", str_c(non_matching, collapse = "', '"), "'")
 }
