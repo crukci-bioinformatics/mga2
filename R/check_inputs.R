@@ -21,6 +21,10 @@ if (length(missing_columns) > 0) {
   stop("missing columns found in ", samples_file, ": '", str_c(missing_columns, collapse = "', '"), "'")
 }
 
+if (nrow(samples) == 0) {
+  stop("empty sample sheet: ", samples_file)
+}
+
 if (nrow(filter(samples, is.na(samples$id))) > 0) {
   stop("missing ids found in ", samples_file)
 }
