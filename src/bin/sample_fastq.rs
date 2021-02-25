@@ -52,6 +52,10 @@ fn main() -> Result<()> {
 
     let config = Config::from_args();
 
+    if config.fastq_files.is_empty() {
+        bail!("No input FASTQ files specified");
+    }
+
     if config.sample_size == 0 {
         bail!("Invalid sample size");
     }
