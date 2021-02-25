@@ -8,7 +8,8 @@ use structopt::StructOpt;
 /// format
 #[derive(StructOpt)]
 struct Config {
-    /// FASTQ file to sample records from
+    /// Input FASTQ files containing sequences to be trimmed and split into
+    /// chunks
     #[structopt(parse(from_os_str))]
     fastq_files: Vec<PathBuf>,
 
