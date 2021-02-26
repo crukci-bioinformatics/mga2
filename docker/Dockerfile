@@ -7,9 +7,11 @@ MAINTAINER Matt Eldridge "matthew.eldridge@cruk.cam.ac.uk" \
 RUN apt update && apt install -y \
     git \
     curl \
+    procps \
     gdebi-core \
     libxml2-dev \
     libssl-dev
+
 
 RUN curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /opt/miniconda3.sh && \
     sh /opt/miniconda3.sh -b -p /opt/conda && \
