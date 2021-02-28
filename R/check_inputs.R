@@ -58,6 +58,12 @@ if (length(duplicates) > 0) {
   stop("the following bowtie index names differ only by case: '", str_c(duplicates, collapse = "', '"), "'")
 }
 
+# rename id column and add new numeric id column
+samples <- samples %>%
+  rename(name = id) %>%
+  mutate(id = row_number()) %>%
+  select(id, everything())
+
 # read genome details file
 genome_details <- read_csv(genome_details_file, col_types = cols(.default = col_character()))
 
@@ -140,14 +146,9 @@ synonyms <- genome_details %>%
   select(-synonyms) %>%
   left_join(synonyms, by = "genome")
 
-# add unique numeric id to be used in labeling sampled reads
-samples <- samples %>%
-  mutate(rownum = row_number()) %>%
-  select(rownum, everything())
-
 # find matching genomes
 species <- samples %>%
-  select(rownum, species) %>%
+  select(id, species) %>%
   separate_rows(species, sep = "\\|") %>%
   drop_na() %>%
   mutate(synonym = str_to_lower(str_trim(species)))
@@ -162,11 +163,11 @@ if (length(non_matching) > 0) {
 
 genomes <- species %>%
   inner_join(synonyms, by = "synonym") %>%
-  select(rownum, genome)
+  select(id, genome)
 
 # find matching control genomes
 controls <- samples %>%
-  select(rownum, controls) %>%
+  select(id, controls) %>%
   separate_rows(controls, sep = "\\|") %>%
   drop_na() %>%
   mutate(synonym = str_to_lower(str_trim(controls)))
@@ -181,24 +182,24 @@ if (length(non_matching) > 0) {
 
 control_genomes <- controls %>%
   inner_join(synonyms, by = "synonym") %>%
-  select(rownum, genome)
+  select(id, genome)
 
 # remove genome matches if these also match as a control
-genomes <- anti_join(genomes, control_genomes, by = c("rownum", "genome"))
+genomes <- anti_join(genomes, control_genomes, by = c("id", "genome"))
 
 # collapse multiple genomes for the same sample/dataset
 genomes <- genomes %>%
-  group_by(rownum) %>%
+  group_by(id) %>%
   summarize(genomes = str_c(genome, collapse = "|"), .groups = "drop")
 
 control_genomes <- control_genomes %>%
-  group_by(rownum) %>%
+  group_by(id) %>%
   summarize(control_genomes = str_c(genome, collapse = "|"), .groups = "drop")
 
 # append matching genomes and control genomes
 samples <- samples %>%
-  left_join(genomes, by = "rownum") %>%
-  left_join(control_genomes, by = "rownum")
+  left_join(genomes, by = "id") %>%
+  left_join(control_genomes, by = "id")
 
 # write new sample sheet
 write_csv(samples, output_samples_file, na = "")
