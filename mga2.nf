@@ -8,7 +8,7 @@ def defaults = [
     fastqDir: "",
     sampleSize: 100000,
     maxNumberToSampleFrom: 10000000000,
-    chunkSize: 5000000,
+    chunkSize: 1000000,
     trimStart: 11,
     trimLength: 36,
     bowtieIndexDir: "bowtie_indexes",
@@ -154,26 +154,26 @@ process check_inputs {
 
 
 process sample_fastq {
-    tag "${id}"
+    tag "${id} ${name}"
 
     input:
-        tuple val(prefix), val(id), path(fastq), val(fastq_pattern)
+        tuple val(id), val(name), path(fastq), val(fastq_pattern)
 
     output:
-        path "${prefix}.sample.fq", emit: fastq
-        path "${prefix}.summary.csv", emit: summary
+        path "${id}.sample.fq", emit: fastq
+        path "${id}.summary.csv", emit: summary
 
     script:
         """
         RUST_LOG=info \
         sample-fastq \
-            --id="${prefix}" \
+            --id="${id}" \
             --sample-size=${params.sampleSize} \
             --max-number-to-sample-from=${params.maxNumberToSampleFrom} \
             --min-sequence-length=${minimumSequenceLength} \
             --prepend-id \
-            --output-file="${prefix}.sample.fq" \
-            --summary-file="${prefix}.summary.csv" \
+            --output-file="${id}.sample.fq" \
+            --summary-file="${id}.summary.csv" \
             --check-unique-record-ids \
             ${fastq}
         """
@@ -275,11 +275,11 @@ process create_summary {
         path adapter_alignments
 
     output:
-        path "${params.outputPrefix}sequence_counts.csv"
         path "${params.outputPrefix}summary.csv"
-        path "${params.outputPrefix}bar_charts.pdf"
-        path "${params.outputPrefix}alignments.txt"
+        path "${params.outputPrefix}genome_alignment_summary.csv"
+        path "${params.outputPrefix}genome_alignments.txt"
         path "${params.outputPrefix}adapter_alignments.txt"
+        path "${params.outputPrefix}bar_charts.pdf"
 
     script:
         """
@@ -318,7 +318,7 @@ workflow {
 
     fastq = check_inputs.out.samples
         .splitCsv(header: true, quote: '"')
-        .map { row -> tuple("${row.rownum}", "${row.id}", file("${fastqDir}${row.fastq}", checkIfExists: true), "${fastqDir}${row.fastq}") }
+        .map { row -> tuple("${row.id}", "${row.name}", file("${fastqDir}${row.fastq}", checkIfExists: true), "${fastqDir}${row.fastq}") }
 
     fastq.subscribe { assert !it[2].isEmpty(), "No FASTQ files found for ${it[1]} matching pattern ${it[3]}" }
 
