@@ -42,7 +42,7 @@ Multi-Genome Alignment (MGA) Contaminant Screen
 ===============================================
 
 Usage:
-    nextflow run crukcibioinformatics/mga
+    nextflow run crukci-bioinformatics/mga2
 
 Options:
     --help                            Show this message and exit
@@ -57,6 +57,11 @@ Options:
     --adapters-fasta FILE             FASTA file containing adapter sequences (default: ${defaults.adaptersFasta})
     --output-dir PATH                 Output directory (default: ${defaults.outputDir})
     --output-prefix PREFIX            Prefix for output files (default: ${defaults.outputPrefix})
+
+Alternatively, override settings using a configuration file and run as follows:
+
+Usage:
+    nextflow run crukci-bioinformatics/mga2 -c mga2.config
     """
     log.info ''
     exit 1
@@ -69,16 +74,16 @@ log.info """\
 Multi-Genome Alignment (MGA) Contaminant Screen
 ===============================================
 
-Sample sheet           : $params.sampleSheet
-Sample size            : $params.sampleSize
-FASTQ directory        : $params.fastqDir
-Chunk size             : $params.chunkSize
-Trim start             : $params.trimStart
-Trim length            : $params.trimLength
-Bowtie index directory : $params.bowtieIndexDir
-Adapters FASTA file    : $params.adaptersFasta
-Output directory       : $params.outputDir
-Output prefix          : $params.outputPrefix
+Sample sheet           : ${params.sampleSheet}
+Sample size            : ${params.sampleSize}
+FASTQ directory        : ${params.fastqDir}
+Chunk size             : ${params.chunkSize}
+Trim start             : ${params.trimStart}
+Trim length            : ${params.trimLength}
+Bowtie index directory : ${params.bowtieIndexDir}
+Adapters FASTA file    : ${params.adaptersFasta}
+Output directory       : ${params.outputDir}
+Output prefix          : ${params.outputPrefix}
 """
 log.info ''
 
@@ -89,15 +94,13 @@ if (!"${fastqDir}".isEmpty() && !"${fastqDir}".endsWith("/")) {
     fastqDir = "${fastqDir}/"
 }
 
-/*
-if (!"${params.sampleSize}".isInteger() || "${params.sampleSize}" as Integer < 100000) {
-    log.error 'Invalid sample size - set to at least the recommended value of 100000'
+if (!"${params.sampleSize}".isInteger() || "${params.sampleSize}" as Integer < 1000) {
+    log.error 'Invalid sample size - set to at least 1000 (100000 recommended)'
     exit 1
 }
-*/
 
 if (!"${params.chunkSize}".isInteger() || "${params.chunkSize}" as Integer < 100000) {
-    log.error 'Invalid chunk size for batch alignment - set to at least 100000 (recommend 5000000)'
+    log.error 'Invalid chunk size for batch alignment - set to at least 100000 (1000000 recommended)'
     exit 1
 }
 
