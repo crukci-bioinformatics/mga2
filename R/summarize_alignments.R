@@ -26,6 +26,7 @@ option_parser <- OptionParser(usage = "usage: %prog [options]", option_list = op
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) == 0) args <- "--help"
 
+
 opt <- parse_args(option_parser, args)
 
 samples_file <- opt$samples_file
@@ -50,6 +51,8 @@ output_alignments_file <- str_c(output_prefix, "genome_alignments.txt")
 output_adapter_alignments_file <- str_c(output_prefix, "adapter_alignments.txt")
 output_alignment_summary_file <- str_c(output_prefix, "genome_alignment_summary.csv")
 output_plot_file <- str_c(output_prefix, "bar_charts.pdf")
+
+options(scipen = 999)
 
 
 # samples
@@ -102,7 +105,7 @@ genomes <- select(genomes, all_of(expected_columns))
 
 # read sequence counts summary from FASTQ sampling
 message("Reading sequence counts from sampling")
-counts <- read_csv(counts_file, col_types = "iii")
+counts <- read_csv(counts_file, col_types = "inn")
 
 expected_columns <- c("id", "read", "sampled")
 missing_columns <- setdiff(expected_columns, colnames(counts))
@@ -209,7 +212,7 @@ for (sample_id in sample_ids) {
 # read alignments in chunks and sort into separate files for each sample
 # to limit memory requirements
 sort_alignments <- function(alignments, pos) {
-  if (pos > 1) message(sprintf("%d", pos - 1))
+  if (pos > 1) message(pos - 1)
 
   missing_columns <- setdiff(alignment_columns, colnames(alignments))
   if (length(missing_columns) > 0) {
@@ -227,7 +230,7 @@ sort_alignments <- function(alignments, pos) {
   }
 }
 
-result <- read_tsv_chunked(alignments_file, SideEffectChunkCallback$new(sort_alignments), col_types = "cccciccic", chunk_size = 250000)
+result <- read_tsv_chunked(alignments_file, SideEffectChunkCallback$new(sort_alignments), col_types = "ccccnccic", chunk_size = 250000)
 
 # summarize alignments for each sample
 
@@ -260,7 +263,7 @@ for (sample_id in sample_ids) {
 
   alignment_file <- sample_alignment_filename(sample_id)
 
-  alignments <- read_tsv(alignment_file, col_types = "icccicccc")
+  alignments <- read_tsv(alignment_file, col_types = "icccncccc")
 
   # calculate sequence lengths and count mismatches
   alignments <- alignments %>%
