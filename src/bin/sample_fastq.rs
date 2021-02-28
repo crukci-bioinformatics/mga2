@@ -125,8 +125,8 @@ fn sample_fastq(
             count += 1;
             number_of_records_read += 1;
 
-            if count % 10_000_000 == 0 {
-                info!("{}", count);
+            if number_of_records_read % 10_000_000 == 0 {
+                info!("{}", number_of_records_read);
             }
 
             if min_sequence_length.is_none()
@@ -143,15 +143,13 @@ fn sample_fastq(
             }
 
             if let Some(max_number_to_sample_from) = max_number_to_sample_from {
-                if count == max_number_to_sample_from {
+                if number_of_records_read == max_number_to_sample_from {
                     break 'outer;
                 }
             }
         }
 
-        if count % 10_000_000 != 0 {
-            info!("{}", count);
-        }
+        info!("{} records read from {}", count, filename);
     }
 
     info!("Total records read: {}", number_of_records_read);
