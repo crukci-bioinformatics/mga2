@@ -215,13 +215,13 @@ process bowtie {
         each genome
 
     output:
-        path "${prefix}.${genome}.txt"
+        path "${prefix}.${genome}.tsv"
 
     script:
         prefix=fastq.baseName
         """
         set -eo pipefail
-        echo "genome	read	strand	chromosome	position	sequence	quality	num	mismatches" > ${prefix}.${genome}.txt
+        echo "genome	read	strand	chromosome	position	sequence	quality	num	mismatches" > ${prefix}.${genome}.tsv
         if [[ `head ${fastq} | wc -l` -gt 0 ]]
         then
             bowtie \
@@ -231,7 +231,7 @@ process bowtie {
                 -x ${bowtie_index_dir}/${genome} \
                 ${fastq} \
             | sed "s/^/${genome}\t/" \
-            >> "${prefix}.${genome}.txt"
+            >> "${prefix}.${genome}.tsv"
         fi
         """
 }
@@ -245,12 +245,12 @@ process exonerate {
         path adapters_fasta
 
     output:
-        path "${prefix}.adapter_alignments.txt"
+        path "${prefix}.adapter_alignments.tsv"
 
     script:
         prefix=fasta.baseName
         """
-        echo "read	start	end	strand	adapter	adapter start	adapter end	adapter strand	percent identity	score" > ${prefix}.adapter_alignments.txt
+        echo "read	start	end	strand	adapter	adapter start	adapter end	adapter strand	percent identity	score" > ${prefix}.adapter_alignments.tsv
         if [[ `head ${fasta} | wc -l` -gt 0 ]]
         then
             exonerate \
@@ -262,7 +262,7 @@ process exonerate {
                 --ryo "%qi\t%qab\t%qae\t%qS\t%ti\t%tab\t%tae\t%tS\t%pi\t%s\n" \
                 ${fasta} \
                 ${adapters_fasta} \
-            >> "${prefix}.adapter_alignments.txt"
+            >> "${prefix}.adapter_alignments.tsv"
         fi
         """
 }
@@ -282,8 +282,8 @@ process create_summary {
     output:
         path "${params.outputPrefix}summary.csv"
         path "${params.outputPrefix}genome_alignment_summary.csv"
-        path "${params.outputPrefix}genome_alignments.txt"
-        path "${params.outputPrefix}adapter_alignments.txt"
+        path "${params.outputPrefix}genome_alignments.tsv"
+        path "${params.outputPrefix}adapter_alignments.tsv"
         path "${params.outputPrefix}bar_charts.pdf"
 
     script:
@@ -343,14 +343,14 @@ workflow {
         genomes
     )
 
-    alignments = bowtie.out.collectFile(name: "alignments.collected.txt", keepHeader: true)
+    alignments = bowtie.out.collectFile(name: "alignments.collected.tsv", keepHeader: true)
 
     exonerate(
         trim_and_split.out.fasta,
         adapters_fasta
     )
 
-    adapter_alignments = exonerate.out.collectFile(name: "adapter_alignments.collected.txt", keepHeader: true)
+    adapter_alignments = exonerate.out.collectFile(name: "adapter_alignments.collected.tsv", keepHeader: true)
 
     create_summary(
         install_dir,
