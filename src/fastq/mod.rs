@@ -45,7 +45,8 @@ impl FastqRecord {
     }
 
     pub fn trim(&mut self, start: usize, end: Option<usize>) -> Result<()> {
-        if self.seq.len() != self.qual.len() {
+        let length = self.seq.len();
+        if self.qual.len() != length {
             bail!("Attempt to trim FASTQ record with differing sequence and quality lengths");
         }
 
@@ -59,14 +60,14 @@ impl FastqRecord {
             }
         }
 
-        if start > self.seq.len() {
+        if start > length {
             self.seq = String::new();
             self.qual = String::new();
         } else {
             match end {
                 Some(end) => {
-                    self.seq = self.seq.as_str()[(start - 1)..end].to_string();
-                    self.qual = self.qual.as_str()[(start - 1)..end].to_string();
+                    self.seq = self.seq.as_str()[(start - 1)..end.min(length)].to_string();
+                    self.qual = self.qual.as_str()[(start - 1)..end.min(length)].to_string();
                 }
                 None => {
                     self.seq = self.seq.as_str()[(start - 1)..].to_string();
@@ -144,7 +145,7 @@ impl<R: BufRead> FastqReader<R> {
                 if error.kind() == ErrorKind::UnexpectedEof {
                     return Ok(false);
                 } else {
-                    bail!("unexpected end of file at line {}", self.line_count + 1);
+                    bail!("problem reading line {}", self.line_count + 1);
                 }
             }
         }
