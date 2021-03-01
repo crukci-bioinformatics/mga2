@@ -42,7 +42,7 @@ Multi-Genome Alignment (MGA) Contaminant Screen
 ===============================================
 
 Usage:
-    nextflow run crukci-bioinformatics/mga2
+    nextflow run -r main crukci-bioinformatics/mga2
 
 Options:
     --help                            Show this message and exit
@@ -58,10 +58,23 @@ Options:
     --output-dir PATH                 Output directory (default: ${defaults.outputDir})
     --output-prefix PREFIX            Prefix for output files (default: ${defaults.outputPrefix})
 
-Alternatively, override settings using a configuration file and run as follows:
+Alternatively, override settings using a configuration file such as the
+following, in which parameter names used are the camelCase equivalent of the
+above options:
+
+params.sampleSheet = "samplesheet.csv"
+params.sampleSize = 100000
+params.trimStart = 11
+params.trimLength = 36
+params.genomeDetails = "genomes.csv"
+params.bowtieIndexDir= "/path_to/bowtie_indexes"
+params.outputDir = "mga"
+params.outputPrefix = ""
+
+and run as follows:
 
 Usage:
-    nextflow run crukci-bioinformatics/mga2 -c mga2.config
+    nextflow run -r main crukci-bioinformatics/mga2 -c mga2.config
     """
     log.info ''
     exit 1
