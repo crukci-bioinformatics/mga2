@@ -47,8 +47,8 @@ if (is.null(output_prefix)) output_prefix <- ""
 suppressPackageStartupMessages(library(tidyverse))
 
 output_summary_file <- str_c(output_prefix, "summary.csv")
-output_alignments_file <- str_c(output_prefix, "genome_alignments.txt")
-output_adapter_alignments_file <- str_c(output_prefix, "adapter_alignments.txt")
+output_alignments_file <- str_c(output_prefix, "genome_alignments.tsv")
+output_adapter_alignments_file <- str_c(output_prefix, "adapter_alignments.tsv")
 output_alignment_summary_file <- str_c(output_prefix, "genome_alignment_summary.csv")
 output_plot_file <- str_c(output_prefix, "bar_charts.pdf")
 
@@ -131,7 +131,7 @@ sequence_counts <- select(samples, id, total = sequences)
 
 
 # function for name of temporary file used for storing alignments for a given sample
-sample_alignment_filename <- function(id) str_c("alignments.", id, ".txt")
+sample_alignment_filename <- function(id) str_c("alignments.", id, ".tsv")
 
 
 # adapter matches
