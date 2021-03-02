@@ -92,23 +92,30 @@ impl FastqRecord {
 }
 
 pub struct FastqReader<R: BufRead> {
+    name: String,
+    reader: R,
     id_capacity: usize,
     sequence_capacity: usize,
-    reader: R,
     test_separator_char: [u8; 1],
     line_count: u32,
 }
 
 impl<R: BufRead> FastqReader<R> {
-    pub fn new(reader: R) -> Self {
-        FastqReader::with_capacity(reader, 50, 160)
+    pub fn new(name: String, reader: R) -> Self {
+        FastqReader::with_capacity(name, reader, 50, 160)
     }
 
-    pub fn with_capacity(reader: R, id_capacity: usize, sequence_capacity: usize) -> Self {
+    pub fn with_capacity(
+        name: String,
+        reader: R,
+        id_capacity: usize,
+        sequence_capacity: usize,
+    ) -> Self {
         FastqReader {
+            name,
+            reader,
             id_capacity,
             sequence_capacity,
-            reader,
             test_separator_char: [0],
             line_count: 0,
         }
@@ -132,20 +139,32 @@ impl<R: BufRead> FastqReader<R> {
     pub fn read_next_into(&mut self, record: &mut FastqRecord) -> Result<bool> {
         record.clear();
 
-        match self.reader.read_exact(&mut self.test_separator_char) {
-            Ok(_) => {
-                if self.test_separator_char[0] != b'@' {
-                    bail!(
-                        "expected '@' character at beginning of line {}",
-                        self.line_count + 1
-                    );
+        loop {
+            match self.reader.read_exact(&mut self.test_separator_char) {
+                Ok(_) => {
+                    if self.test_separator_char[0] == b'@' {
+                        break;
+                    } else if self.test_separator_char[0] == b'\n' {
+                        // skip empty line
+                        continue;
+                    } else {
+                        bail!(
+                            "expected '@' character at beginning of line {}, {}",
+                            self.line_count + 1,
+                            self.name
+                        );
+                    }
                 }
-            }
-            Err(error) => {
-                if error.kind() == ErrorKind::UnexpectedEof {
-                    return Ok(false);
-                } else {
-                    bail!("problem reading line {}", self.line_count + 1);
+                Err(error) => {
+                    if error.kind() == ErrorKind::UnexpectedEof {
+                        return Ok(false);
+                    } else {
+                        bail!(
+                            "unexpected problem reading line {}, {}",
+                            self.line_count + 1,
+                            self.name
+                        );
+                    }
                 }
             }
         }
@@ -166,8 +185,9 @@ impl<R: BufRead> FastqReader<R> {
 
         if record.id.is_empty() {
             bail!(
-                "error extracting sequence id for record at line {}",
-                self.line_count
+                "error extracting sequence id for record at line {}, {}",
+                self.line_count,
+                self.name
             );
         }
 
@@ -176,8 +196,15 @@ impl<R: BufRead> FastqReader<R> {
         loop {
             let number_of_bytes = self.read_next_line(&mut record.seq);
             match number_of_bytes {
-                0 => bail!("incomplete record at line {}", self.line_count - 1),
-                1 => bail!("empty line at line number {}", self.line_count),
+                0 => bail!(
+                    "incomplete record at line {}, {}",
+                    self.line_count - 1,
+                    self.name
+                ),
+                1 => {
+                    // empty line
+                    record.seq.pop();
+                }
                 _ => {
                     // check for separator character
                     let first_char = &record.seq[length..length + 1];
@@ -191,8 +218,9 @@ impl<R: BufRead> FastqReader<R> {
                     // check for spaces in sequence
                     if record.seq[length..].find(' ').is_some() {
                         bail!(
-                            "sequence contains space(s) for record at line {}",
-                            self.line_count
+                            "sequence contains space(s) for record at line {}, {}",
+                            self.line_count,
+                            self.name
                         );
                     }
                     length = record.seq.len();
@@ -200,32 +228,36 @@ impl<R: BufRead> FastqReader<R> {
             };
         }
 
-        if record.seq.is_empty() {
-            bail!("zero length sequence at line {}", self.line_count);
-        }
-
         let mut qual_length = 0;
         while qual_length < length {
             let number_of_bytes = self.read_next_line(&mut record.qual);
             match number_of_bytes {
-                0 => bail!("incomplete record at line {}", self.line_count - 1),
-                1 => bail!("empty line at line number {}", self.line_count),
-                _ => record.qual.pop(),
+                0 => bail!(
+                    "incomplete record at line {}, {}",
+                    self.line_count - 1,
+                    self.name
+                ),
+                _ => {
+                    record.qual.pop();
+                }
             };
-            // check for spaces in quality scores
-            if record.qual[qual_length..].find(' ').is_some() {
-                bail!(
-                    "qualities contains space(s) for record at line {}",
-                    self.line_count
-                );
-            }
             qual_length = record.qual.len();
         }
 
         if record.qual.len() != length {
             bail!(
-                "sequence and quality lengths differ for record ending at line {}",
-                self.line_count
+                "sequence and quality lengths differ for record ending at line {}, {}",
+                self.line_count,
+                self.name
+            );
+        }
+
+        // check for spaces in quality scores
+        if record.qual.find(' ').is_some() {
+            bail!(
+                "qualities contains space(s) for record ending at line {}, {}",
+                self.line_count,
+                self.name
             );
         }
 
@@ -261,8 +293,15 @@ impl<W: Write> FastqWriter<W> {
 }
 
 pub fn create_fastq_reader(fastq_file: &PathBuf) -> Result<FastqReader<BufReader<Box<dyn Read>>>> {
-    let file =
-        File::open(fastq_file).with_context(|| format!("Error opening file {:?}", fastq_file))?;
+    let fastq_file_name = match fastq_file.to_str() {
+        Some(name) => String::from(name),
+        None => {
+            bail!("invalid file name for {:?}", fastq_file)
+        }
+    };
+
+    let file = File::open(fastq_file)
+        .with_context(|| format!("Error opening file {}", fastq_file_name))?;
 
     let reader: Box<dyn Read> = if fastq_file.to_str().unwrap().ends_with(".gz") {
         Box::new(MultiGzDecoder::new(BufReader::with_capacity(
@@ -274,7 +313,7 @@ pub fn create_fastq_reader(fastq_file: &PathBuf) -> Result<FastqReader<BufReader
     };
 
     let buffered_reader = BufReader::with_capacity(64 * 1024, reader);
-    let fastq_reader = FastqReader::new(buffered_reader);
+    let fastq_reader = FastqReader::new(fastq_file_name, buffered_reader);
 
     Ok(fastq_reader)
 }
