@@ -26,7 +26,6 @@ option_parser <- OptionParser(usage = "usage: %prog [options]", option_list = op
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) == 0) args <- "--help"
 
-
 opt <- parse_args(option_parser, args)
 
 samples_file <- opt$samples_file
@@ -49,8 +48,8 @@ suppressPackageStartupMessages(library(tidyverse))
 output_summary_file <- str_c(output_prefix, "summary.csv")
 output_alignments_file <- str_c(output_prefix, "genome_alignments.tsv")
 output_adapter_alignments_file <- str_c(output_prefix, "adapter_alignments.tsv")
-output_alignment_summary_file <- str_c(output_prefix, "genome_alignment_summary.csv")
-output_plot_file <- str_c(output_prefix, "bar_charts.pdf")
+output_alignment_summary_file <- str_c(output_prefix, "alignment_summary.csv")
+output_plot_file_prefix <- str_c(output_prefix, "alignment_bar_chart")
 
 options(scipen = 999)
 
@@ -127,7 +126,6 @@ if (nrow(missing_counts) > 0) {
 # extracts from samples table used in join operations later
 sample_names <- select(samples, id, name)
 sampled_counts <- select(samples, id, total = sampled)
-sequence_counts <- select(samples, id, total = sequences)
 
 
 # function for name of temporary file used for storing alignments for a given sample
@@ -433,79 +431,67 @@ alignment_summary %>%
   write_csv(output_alignment_summary_file, na = "")
 
 
-# stacked bar charts
-# ------------------
+# stacked bar chart
+# -----------------
 
-message("Creating bar charts")
-
-pdf(output_plot_file, width = 8, height = 1 + nrow(distinct(summary, id)) * 0.35)
+message("Creating bar chart")
 
 lower_error_rate <- 0.25
 upper_error_rate <- 1.5
 
-alignment_summary %>%
-  select(id, genome, assigned, expected, control, error_rate = `assigned error rate`) %>%
-  left_join(select(samples, id, name, sampled, total = sequences), by = "id") %>%
-  mutate(sequences = ifelse(sampled == 0, 0, (assigned / sampled) * total / 1e6)) %>%
+plot_data <- alignment_summary %>%
+  select(id, name, reference = genome, count = assigned, error_rate = `assigned error rate`, expected, control) %>%
+  filter(count > 0) %>%
   mutate(category = ifelse(expected, "expected species", "unexpected/contaminant")) %>%
   mutate(category = ifelse(control, "control", category)) %>%
   mutate(category = replace_na(category, "unmapped")) %>%
-  mutate(category = factor(category, levels = rev(c("expected species", "control", "unexpected/contaminant", "unmapped")))) %>%
+  select(-expected, -control) %>%
+  mutate(type = "genome") %>%
+  bind_rows(transmute(summary, id, name, reference = "adapter", count = adapter, error_rate = lower_error_rate, category = "adapter", type = "adapter")) %>%
+  left_join(counts, by = "id") %>%
+  mutate(scaled_count = ifelse(sampled == 0, 0, (count / sampled) * sequences / 1e6)) %>%
+  select(-sampled, -sequences) %>%
   arrange(id) %>%
-  mutate(name = fct_rev(as_factor(name))) %>%
+  mutate(name = as_factor(name)) %>%
+  mutate(type = factor(type, levels = c("adapter", "genome"))) %>%
+  mutate(category = factor(category, levels = rev(c("expected species", "control", "unexpected/contaminant", "unmapped", "adapter")))) %>%
   mutate(bounded_error_rate = pmin(error_rate, upper_error_rate, na.rm = TRUE)) %>%
   mutate(bounded_error_rate = pmax(bounded_error_rate, lower_error_rate, na.rm = TRUE)) %>%
   mutate(bounded_error_rate = ifelse(category == "unmapped", lower_error_rate, bounded_error_rate)) %>%
-  arrange(name, category, sequences) %>%
+  arrange(name, type, category, count) %>%
   mutate(group = row_number()) %>%
-  ggplot(aes(x = name, y = sequences, group = group, fill = category, alpha = -bounded_error_rate)) +
-  geom_col(colour = "grey30", width = 0.6) +
-  scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05)), labels = scales::comma) +
-  scale_fill_manual(values = c("grey97", "red", "goldenrod1", "green"), drop = FALSE, guide = guide_legend(reverse = TRUE)) +
+  mutate(bar_width = ifelse(type == "adapter", 0.5, 1))
+
+plot <- ggplot(plot_data, aes(x = type, y = scaled_count, group = group, fill = category, alpha = -bounded_error_rate)) +
+  geom_col(colour = "grey30", width = plot_data$bar_width) +
+  scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05), add = 0), labels = scales::comma) +
+  scale_fill_manual(values = c("magenta", "grey97", "red", "goldenrod1", "green"), drop = FALSE, guide = guide_legend(reverse = TRUE)) +
   scale_alpha(guide = "none") +
   labs(y = "sequence reads (millions)") +
   coord_flip() +
+  facet_grid(rows = vars(name), switch = "y") +
   theme_bw() +
   theme(
     legend.position = "bottom",
     legend.title = element_blank(),
+    legend.key.height = unit(0.8, "line"),
+    legend.key.width = unit(1.5, "line"),
+    legend.text = element_text(margin = margin(r = 1, unit = 'line')),
     panel.border = element_blank(),
     panel.grid = element_blank(),
     axis.line.x = element_line(),
     axis.ticks.y = element_blank(),
-    axis.ticks.length.x = unit(0.2, "cm"),
+    axis.ticks.length.x = unit(0.35, "line"),
     axis.title.x = element_text(size = 10),
-    axis.title.y = element_blank()
+    axis.title.y = element_blank(),
+    axis.text.y = element_blank(),
+    strip.background = element_blank(),
+    strip.text.y.left = element_text(angle = 0, vjust = 0.8)
   )
 
-summary %>%
-  select(id, name, sequences, sampled, adapter) %>%
-  mutate(`no adapter` = sampled - adapter) %>%
-  pivot_longer(all_of(c("adapter", "no adapter")), names_to = "category", values_to = "count") %>%
-  mutate(sequences = ifelse(sampled == 0, 0, (count / sampled) * sequences / 1e6)) %>%
-  arrange(id) %>%
-  mutate(name = fct_rev(as_factor(name))) %>%
-  mutate(category = fct_rev(category)) %>%
-  ggplot(aes(x = name, y = sequences, fill = category)) +
-  geom_col(colour = "grey30", width = 0.6) +
-  scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05)), labels = scales::comma) +
-  scale_fill_manual(values = c("grey97", "magenta"), drop = FALSE, guide = guide_legend(reverse = TRUE)) +
-  scale_alpha(guide = "none") +
-  labs(y = "sequence reads (millions)") +
-  coord_flip() +
-  theme_bw() +
-  theme(
-    legend.position = "bottom",
-    legend.title = element_blank(),
-    panel.border = element_blank(),
-    panel.grid = element_blank(),
-    axis.line.x = element_line(),
-    axis.ticks.y = element_blank(),
-    axis.ticks.length.x = unit(0.2, "cm"),
-    axis.title.x = element_text(size = 10),
-    axis.title.y = element_blank()
-  )
+width <- 10
+height <- 0.7 * (1.5 + nrow(sample_names))
 
-dev.off()
-
-
+ggsave(str_c(output_plot_file_prefix, ".png"), plot, width = width, height = height)
+ggsave(str_c(output_plot_file_prefix, ".pdf"), plot, width = width, height = height)
+ggsave(str_c(output_plot_file_prefix, ".svg"), plot, width = width, height = height)

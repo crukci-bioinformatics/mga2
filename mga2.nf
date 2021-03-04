@@ -294,10 +294,12 @@ process create_summary {
 
     output:
         path "${params.outputPrefix}summary.csv"
-        path "${params.outputPrefix}genome_alignment_summary.csv"
+        path "${params.outputPrefix}alignment_summary.csv"
         path "${params.outputPrefix}genome_alignments.tsv"
         path "${params.outputPrefix}adapter_alignments.tsv"
-        path "${params.outputPrefix}bar_charts.pdf"
+        path "${params.outputPrefix}alignment_bar_chart.png"
+        path "${params.outputPrefix}alignment_bar_chart.pdf"
+        path "${params.outputPrefix}alignment_bar_chart.svg"
 
     script:
         """
