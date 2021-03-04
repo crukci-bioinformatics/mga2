@@ -10,8 +10,8 @@ RUN apt update && apt install -y \
     procps \
     gdebi-core \
     libxml2-dev \
-    libssl-dev
-
+    libssl-dev \
+    libfontconfig1-dev
 
 RUN curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /opt/miniconda3.sh && \
     sh /opt/miniconda3.sh -b -p /opt/conda && \
@@ -31,9 +31,7 @@ RUN curl -O https://cdn.rstudio.com/r/debian-10/pkgs/r-${R_VERSION}_1_amd64.deb 
 
 ENV PATH /opt/R/${R_VERSION}/bin:${PATH}
 
-RUN R -e 'install.packages("tidyverse", repos = "https://cloud.r-project.org")'
-
-RUN R -e 'install.packages("optparse", repos = "https://cloud.r-project.org")'
+RUN R -e 'install.packages(c("optparse", "svglite", "tidyverse"), repos = "https://cloud.r-project.org")'
 
 ADD "https://api.github.com/repos/crukci-bioinformatics/mga2/commits?per_page=1" /opt/mga2_latest_commit
 RUN git clone https://github.com/crukci-bioinformatics/mga2 /opt/mga2 && \
