@@ -293,13 +293,13 @@ process create_summary {
         path adapter_alignments
 
     output:
-        path "${params.outputPrefix}summary.csv"
-        path "${params.outputPrefix}alignment_summary.csv"
-        path "${params.outputPrefix}genome_alignments.tsv"
-        path "${params.outputPrefix}adapter_alignments.tsv"
-        path "${params.outputPrefix}alignment_bar_chart.png"
-        path "${params.outputPrefix}alignment_bar_chart.pdf"
-        path "${params.outputPrefix}alignment_bar_chart.svg"
+        path "${params.outputPrefix}mga_summary.csv"
+        path "${params.outputPrefix}mga_alignment_summary.csv"
+        path "${params.outputPrefix}mga_genome_alignments.tsv.gz"
+        path "${params.outputPrefix}mga_adapter_alignments.tsv.gz"
+        path "${params.outputPrefix}mga_alignment_bar_chart.png"
+        path "${params.outputPrefix}mga_alignment_bar_chart.pdf"
+        path "${params.outputPrefix}mga_alignment_bar_chart.svg"
 
     script:
         """

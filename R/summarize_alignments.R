@@ -45,11 +45,11 @@ if (is.null(output_prefix)) output_prefix <- ""
 
 suppressPackageStartupMessages(library(tidyverse))
 
-output_summary_file <- str_c(output_prefix, "summary.csv")
-output_alignments_file <- str_c(output_prefix, "genome_alignments.tsv")
-output_adapter_alignments_file <- str_c(output_prefix, "adapter_alignments.tsv")
-output_alignment_summary_file <- str_c(output_prefix, "alignment_summary.csv")
-output_plot_file_prefix <- str_c(output_prefix, "alignment_bar_chart")
+output_summary_file <- str_c(output_prefix, "mga_summary.csv")
+output_alignments_file <- str_c(output_prefix, "mga_genome_alignments.tsv.gz")
+output_adapter_alignments_file <- str_c(output_prefix, "mga_adapter_alignments.tsv.gz")
+output_alignment_summary_file <- str_c(output_prefix, "mga_alignment_summary.csv")
+output_plot_file_prefix <- str_c(output_prefix, "mga_alignment_bar_chart")
 
 options(scipen = 999)
 
