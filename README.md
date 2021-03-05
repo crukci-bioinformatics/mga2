@@ -18,7 +18,9 @@ mga2 is a rewrite of the original [MGA](https://github.com/crukci-bioinformatics
 in which the workflow has been ported to [Nextflow](https://www.nextflow.io/index.html),
 sampling of FASTQ records (the rate limiting step for very large datasets such
 as NovaSeq S4 flow cells) has been rewritten in Rust and summarization and
-plotting has been rewritten using R.
+plotting has been rewritten using R. mga2 was developed by Matt Eldridge in the
+Bioinformatics Core at the Cancer Research UK Cambridge Institute (CRUK CI) to
+support the genome sequencing operation run by the Genomics Core Facility.
 
 ---
 
@@ -37,7 +39,7 @@ and create a genome metadata file named `genomes.csv`
 
 5. Run MGA optionally specifying an execution profile and whether to use Docker or Singularity
 
-    `nextflow run crukci-bioinformatics/mga2 -c mga.config -profile cluster -with-singularity`
+    `nextflow run crukci-bioinformatics/mga2 -c mga.config -profile cluster`
 
 ---
 
@@ -200,11 +202,55 @@ elsewhere.
 
 ### Using Docker or Singularity
 
-TODO
+MGA's dependencies are packaged as a Docker image available on
+[Docker Hub](https://hub.docker.com) with the name `crukcibioinformatics/mga2`.
+This can be pulled from Docker Hub using `docker pull` or used to build a
+Singularity image using `singularity build` but Nextflow will automatically do
+this if either the `-with-docker` or `-with-singularity` command line options
+are specified e.g.
+
+    nextflow run crukci-bioinformatics/mga2 -c mga.config -with-docker
+
+or
+
+    nextflow run crukci-bioinformatics/mga2 -c mga.config -with-singularity
+
+When using Singularity, MGA assumes that the user bind control feature is
+enabled and sets the `singularity.autoMounts = true` in the Nextflow
+configuration file. See the Nextflow documentation for more details on this.
 
 ### Profiles
 
-TODO show how to create a bespoke profile (including specifying use of Singularity to remove need for -with-singularity flag)
+Resource settings are configured using Nextflow profiles. MGA provides three
+profiles - `standard`, `bigserver` and `cluster` configured for running on
+servers and the high-performance compute cluster at CRUK CI. These specify
+the maximum number of CPUs or memory that can be used at any one time during
+the pipeline run or the number of maximum number of jobs that can be submitted
+to the cluster to be run in parallel.
+
+A custom profile can be created in the configuration file, e.g. `mga.config`,
+an example of which is shown below.
+
+    // within mga.config
+    myprofile {
+        process.executor = 'slurm'
+        executor {
+            queueSize = 25
+            pollInterval = 30.sec
+            jobName = { "'$task.name'" }
+        }
+        singularity.enabled = true
+    }
+
+This profile can be specified using the `-profile` command line option.
+
+    nextflow run crukci-bioinformatics/mga2 -c mga.config -profile myprofile
+    
+With this profile, Nextflow will submit jobs to cluster nodes using the SLURM
+resource manager. A maximum number of 25 jobs that will be submitted for running
+in parallel and Nextflow will poll every 30 seconds for completed jobs. Use of
+Singularity for running jobs using the mga2 container is enabled and it is not
+necessary to specify this separately with the  `-with-singularity` option.
 
 ### Pipeline summary reports
 
@@ -297,9 +343,9 @@ will map to their expected genomes; longer reads are more likely to require
 gapped alignments.
 
 Furthermore, MGA was written primarily to support the Genomic Core Facility
-within the Cancer Research UK Cambridge Institute. Trimming to a fixed sequence
-length allows for a more direct comparison of mapping and error rates across
-sequencing runs that may have very different read lengths.
+at CRUK CI. Trimming to a fixed sequence length allows for a more direct
+comparison of mapping and error rates across sequencing runs that may have very
+different read lengths.
 
 While trimming to the first 36 bases will work in many cases, there are some
 sequencing libraries in which the beginning of the read contains non-genomic
