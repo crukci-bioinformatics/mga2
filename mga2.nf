@@ -111,8 +111,8 @@ if (!"${params.sampleSize}".isInteger() || "${params.sampleSize}" as Integer < 1
     exit 1, "Invalid sample size - set to at least 1000 (100000 recommended)"
 }
 
-if (!"${params.maxNumberToSampleFrom}".isInteger() || "${params.maxNumberToSampleFrom}" as Integer < "${params.sampleSize}" as Integer) {
-    exit 1, "Invalid number of sequence reads to sample from - must be at least as large as the sample size"
+if (!"${params.maxNumberToSampleFrom}".isLong() || "${params.maxNumberToSampleFrom}" as Long < "${params.sampleSize}" as Long) {
+    exit 1, "Invalid number of sequence reads to sample from (${params.maxNumberToSampleFrom}) - must be at least as large as the sample size (${params.sampleSize})"
 }
 
 if (!"${params.chunkSize}".isInteger() || "${params.chunkSize}" as Integer < 100000) {
