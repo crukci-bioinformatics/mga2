@@ -29,15 +29,15 @@ plotting has been rewritten using R.
     `curl -s https://get.nextflow.io | bash`
 
 2. Create reference data directory and copy or create links to bowtie indexes
-and create a genome metadata file (see below)
+and create a genome metadata file named `genomes.csv`
 
 3. Create a sample sheet named `samplesheet.csv` specifying the FASTQ files for each sample or dataset and the expected species and/or controls
 
 4. Create a configuration file named `mga.config` specifying parameter settings
 
-5. Run MGA
+5. Run MGA optionally specifying an execution profile and whether to use Docker or Singularity
 
-    `nextflow run crukci-bioinformatics/mga2`
+    `nextflow run crukci-bioinformatics/mga2 -c mga.config -profile cluster -with-singularity`
 
 ---
 
@@ -204,7 +204,11 @@ TODO
 
 ### Profiles
 
-TODO
+TODO show how to create a bespoke profile (including specifying use of Singularity to remove need for -with-singularity flag)
+
+### Pipeline summary reports
+
+TODO details of Nextflow job summary and timeline reports
 
 ---
 
