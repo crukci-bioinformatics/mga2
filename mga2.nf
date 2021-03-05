@@ -1,102 +1,33 @@
 #!/usr/bin/env nextflow
 
+// enable DSL 2 syntax
+nextflow.enable.dsl = 2
+
+
+// ----------------------------------------------------------------------------
 // default parameter settings
+// --------------------------
 
-def defaults = [
-    sampleSheet: 'samplesheet.csv',
-    fastqDir: "",
-    sampleSize: 100000,
-    maxNumberToSampleFrom: 10000000000,
-    chunkSize: 1000000,
-    trimStart: 11,
-    trimLength: 36,
-    genomeDetails: "${projectDir}/resources/genomes.csv",
-    bowtieIndexDir: "bowtie_indexes",
-    adaptersFasta: "${projectDir}/resources/adapters.fa",
-    outputDir: "${launchDir}",
-    outputPrefix: ""
-]
+params.help                  = false
+params.sampleSheet           = "samplesheet.csv"
+params.fastqDir              = ""
+params.sampleSize            = 100000
+params.maxNumberToSampleFrom = 10000000000
+params.chunkSize             = 1000000
+params.trimStart             = 1
+params.trimLength            = 36
+params.genomeDetails         = "${projectDir}/resources/genomes.csv"
+params.bowtieIndexDir        = "bowtie_indexes"
+params.adaptersFasta         = "${projectDir}/resources/adapters.fa"
+params.outputDir             = "${launchDir}"
+params.outputPrefix          = ""
 
-// set parameters to default settings
 
-params.help = false
-params.sampleSheet = defaults.sampleSheet
-params.fastqDir = defaults.fastqDir
-params.sampleSize = defaults.sampleSize
-params.maxNumberToSampleFrom = defaults.maxNumberToSampleFrom
-params.chunkSize = defaults.chunkSize
-params.trimStart = defaults.trimStart
-params.trimLength = defaults.trimLength
-params.genomeDetails = defaults.genomeDetails
-params.bowtieIndexDir = defaults.bowtieIndexDir
-params.adaptersFasta = defaults.adaptersFasta
-params.outputDir = defaults.outputDir
-params.outputPrefix = defaults.outputPrefix
-
-//print usage
-
-if (params.help) {
-    log.info ''
-    log.info """\
-Multi-Genome Alignment (MGA) Contaminant Screen
-===============================================
-
-Usage:
-    nextflow run crukci-bioinformatics/mga2
-
-Options:
-    --help                               Show this message and exit
-    --sample-sheet FILE                  Sample sheet CSV file containing id, fastq (file path/pattern) and species columns (default: ${defaults.sampleSheet})
-    --fastq-dir DIR                      Directory in which FASTQ files are located (optional, can specify absolute or relative paths in sample sheet instead)
-    --sample-size INTEGER                Number of sequences to sample for each sample/dataset (default: ${defaults.sampleSize})
-    --max-number-to-sample-from INTEGER  Maximum number of sequences to read/sample from (default: ${defaults.maxNumberToSampleFrom})
-    --chunk-size INTEGER                 Number of sequences for each chunk in batch processing of sampled sequences (default: ${defaults.chunkSize})
-    --trim-start INTEGER                 The position at which the trimmed sequence starts, all bases before this position are trimmed (default: ${defaults.trimStart})
-    --trim-length INTEGER                The maximum length of the trimmed sequence (default: ${defaults.trimLength})
-    --genome-details FILE                Genome details CSV file containing genome, species and synonym columns (default: ${defaults.genomeDetails})
-    --bowtie-index-dir PATH              Directory containing bowtie indexes for reference genomes (default: ${defaults.bowtieIndexDir})
-    --adapters-fasta FILE                FASTA file containing adapter sequences (default: ${defaults.adaptersFasta})
-    --output-dir PATH                    Output directory (default: ${defaults.outputDir})
-    --output-prefix PREFIX               Prefix for output files (default: ${defaults.outputPrefix})
-
-Alternatively, override settings using a configuration file such as the
-following, in which parameter names used are the camelCase equivalent of the
-above options:
-
-params.sampleSheet = "samplesheet.csv"
-params.sampleSize = 100000
-params.trimStart = 11
-params.trimLength = 36
-params.genomeDetails = "genomes.csv"
-params.bowtieIndexDir= "/path_to/bowtie_indexes"
-params.outputDir = "mga"
-params.outputPrefix = ""
-
-and run as follows:
-
-Usage:
-    nextflow run crukci-bioinformatics/mga2 -c mga2.config
-
-Sample sheet           : ${params.sampleSheet}
-FASTQ directory        : ${params.fastqDir}
-Sample size            : ${params.sampleSize}
-Maximum sampled from   : ${params.maxNumberToSampleFrom}
-Chunk size             : ${params.chunkSize}
-Trim start             : ${params.trimStart}
-Trim length            : ${params.trimLength}
-Genomes details file   : ${params.genomeDetails}
-Bowtie index directory : ${params.bowtieIndexDir}
-Adapters FASTA file    : ${params.adaptersFasta}
-Output directory       : ${params.outputDir}
-Output prefix          : ${params.outputPrefix}
-    """
-    log.info ''
-    exit 1
-}
-
+// ----------------------------------------------------------------------------
 // summary of configuration parameters
+// -----------------------------------
 
-log.info ''
+log.info ""
 log.info """\
 Multi-Genome Alignment (MGA) Contaminant Screen
 ===============================================
@@ -114,10 +45,62 @@ Adapters FASTA file    : ${params.adaptersFasta}
 Output directory       : ${params.outputDir}
 Output prefix          : ${params.outputPrefix}
 """
-log.info ''
+log.info ""
 
 
-// validate input parameters and calculate minimum sequence length used for sampling sequences
+// ----------------------------------------------------------------------------
+// help/usage
+// ----------
+
+if (params.help) {
+    log.info ""
+    log.info """\
+Usage:
+    nextflow run crukci-bioinformatics/mga2
+
+Options:
+    --help                        Show this message and exit
+    --sample-sheet                Sample sheet CSV file containing id, fastq (file path/pattern) and species columns
+    --fastq-dir                   Directory in which FASTQ files are located (optional, can specify absolute or relative paths in sample sheet instead)
+    --sample-size                 Number of sequences to sample for each sample/dataset
+    --max-number-to-sample-from   Maximum number of sequences to read/sample from
+    --chunk-size                  Number of sequences for each chunk in batch processing of sampled sequences
+    --trim-start                  The position at which the trimmed sequence starts, all bases before this position are trimmed
+    --trim-length                 The maximum length of the trimmed sequence
+    --genome-details              Genome details CSV file containing genome, species and synonym columns
+    --bowtie-index-dir            Directory containing bowtie indexes for reference genomes
+    --adapters-fasta              FASTA file containing adapter sequences
+    --output-dir                  Output directory
+    --output-prefix               Prefix for output files
+
+Alternatively, override settings using a configuration file such as the
+following, in which parameter names used are the camelCase equivalent of the
+above options:
+
+params {
+    sampleSheet    = "samplesheet.csv"
+    sampleSize     = 100000
+    trimStart      = 11
+    trimLength     = 36
+    genomeDetails  = "genomes.csv"
+    bowtieIndexDir = "/path_to/bowtie_indexes"
+    outputDir      = "mga"
+    outputPrefix   = ""
+}
+
+and run as follows:
+
+Usage:
+    nextflow run crukci-bioinformatics/mga2 -c mga2.config
+    """
+    log.info ""
+    exit 0
+}
+
+
+// ----------------------------------------------------------------------------
+// validate input parameters
+// -------------------------
 
 fastqDir = "${params.fastqDir}"
 if (!"${fastqDir}".isEmpty() && !"${fastqDir}".endsWith("/")) {
@@ -125,49 +108,48 @@ if (!"${fastqDir}".isEmpty() && !"${fastqDir}".endsWith("/")) {
 }
 
 if (!"${params.sampleSize}".isInteger() || "${params.sampleSize}" as Integer < 1000) {
-    log.error 'Invalid sample size - set to at least 1000 (100000 recommended)'
-    exit 1
+    exit 1, "Invalid sample size - set to at least 1000 (100000 recommended)"
+}
+
+if (!"${params.maxNumberToSampleFrom}".isInteger() || "${params.maxNumberToSampleFrom}" as Integer < "${params.sampleSize}" as Integer) {
+    exit 1, "Invalid number of sequence reads to sample from - must be at least as large as the sample size"
 }
 
 if (!"${params.chunkSize}".isInteger() || "${params.chunkSize}" as Integer < 100000) {
-    log.error 'Invalid chunk size for batch alignment - set to at least 100000 (1000000 recommended)'
-    exit 1
+    exit 1, "Invalid chunk size for batch alignment - set to at least 100000 (1000000 recommended)"
 }
 
-int trimStart = 1
+trimStart = 1
 
 if ("${params.trimStart}".isInteger()) {
     trimStart = "${params.trimStart}" as Integer
 } else {
-    log.error 'Invalid trim start'
-    exit 1
+    exit 1, "Invalid trim start"
 }
 
 if (trimStart <= 0) {
-    log.error 'Invalid trim start - must be a positive integer value'
-    exit 1
+    exit 1, "Invalid trim start - must be a positive integer value"
 }
 
-int trimLength = 36
+trimLength = 36
 
 if ("${params.trimLength}".isInteger()) {
     trimLength = "${params.trimLength}" as Integer
 } else {
-    log.error 'Invalid trim length'
-    exit 1
+    exit 1, "Invalid trim length"
 }
 
 if (trimLength < 30) {
-    log.error 'Invalid trim length - trimmed sequences should be sufficiently long to align to reference genomes, i.e. at least 30'
-    exit 1
+    exit 1, "Invalid trim length - trimmed sequences should be sufficiently long to align to reference genomes, i.e. at least 30"
 }
 
-int minimumSequenceLength = trimStart + trimLength - 1
+// calculate minimum sequence length used for sampling sequences
+minimumSequenceLength = trimStart + trimLength - 1
 
 
-// enable DSL 2 syntax
-nextflow.enable.dsl = 2
-
+// ----------------------------------------------------------------------------
+// processes
+// ---------
 
 process check_inputs {
     input:
@@ -177,8 +159,8 @@ process check_inputs {
         path bowtie_index_list
 
     output:
-        path 'samples.checked.csv', emit: samples
-        path 'genomes.checked.csv', emit: genomes
+        path "samples.checked.csv", emit: samples
+        path "genomes.checked.csv", emit: genomes
 
     script:
         """
@@ -219,8 +201,8 @@ process trim_and_split {
         path fastq
 
     output:
-        path 'chunk.*.fq', emit: fastq
-        path 'chunk.*.fa', emit: fasta
+        path "chunk.*.fq", emit: fastq
+        path "chunk.*.fa", emit: fasta
 
     script:
         """
@@ -330,6 +312,10 @@ process create_summary {
         """
 }
 
+
+// ----------------------------------------------------------------------------
+// workflow
+// --------
 
 workflow {
 
