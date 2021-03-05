@@ -1,4 +1,4 @@
-# mga2: Multi-genome alignment contaminant screen for high-throughput sequence data
+# Multi-genome alignment (MGA) contaminant screen for high-throughput sequence data
 
 MGA is a quality control tool for high-throughput sequence data. It screens for
 contaminants by aligning sequence reads in FASTQ format against a series of
