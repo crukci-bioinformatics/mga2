@@ -64,6 +64,11 @@ adapter sequences. The adapters file used by default is provided by MGA.
 
 ### Sample sheet
 
+The sample sheet is a CSV file providing details about different samples, pools
+or lanes to be screened with MGA. It contains one row for each dataset,
+typically a sample or a lane of sequencing. It must contain the columns
+described in the following table.
+
 Column   | Description                                                                 | Example
 ---------|-----------------------------------------------------------------------------|---------
 id       | Sample name or dataset identifier (must be unique within this sample sheet) | SLX-19791
@@ -84,6 +89,20 @@ the `fastqDir` parameter if set to all FASTQ file names or paths givin in the
 
 A FASTQ file name pattern can be specified using wildcard characters ('*') if
 the data for a given sample or dataset are split across multiple FASTQ files.
+
+The following sample sheet file is for 4 lanes of a NovaSeq S4 flow cell. This
+run contains two multiplexed pools of sequencing libraries for many samples, one
+of which is run on the first 3 lanes. The FASTQ files are in a subdirectory
+named `fastq` and the wildcard character is used to sample records from all
+matching FASTQ files. The SLX-20261 pool contains libraries from both human and
+mouse samples. A PhiX control has been spiked in.
+
+    id,fastq,species,controls
+    SLX-20261.HWTJMDSXY.s_1,fastq/SLX-20261.*.HWTJMDSXY.s_1.r_2.fq.gz,human|mouse,phix
+    SLX-20261.HWTJMDSXY.s_2,fastq/SLX-20261.*.HWTJMDSXY.s_2.r_2.fq.gz,human|mouse,phix
+    SLX-20261.HWTJMDSXY.s_3,fastq/SLX-20261.*.HWTJMDSXY.s_3.r_2.fq.gz,human|mouse,phix
+    SLX-20262.HWTJMDSXY.s_4,fastq/SLX-20262.*.HWTJMDSXY.s_4.r_2.fq.gz,human,phix
+
 
 ### Parameter settings
 
