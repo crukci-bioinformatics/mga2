@@ -18,9 +18,9 @@ mga2 is a rewrite of the original [MGA](https://github.com/crukci-bioinformatics
 in which the workflow has been ported to [Nextflow](https://www.nextflow.io/index.html),
 sampling of FASTQ records (the rate limiting step for very large datasets such
 as NovaSeq S4 flow cells) has been rewritten in Rust and summarization and
-plotting has been rewritten using R. mga2 was developed by Matt Eldridge in the
-Bioinformatics Core at the Cancer Research UK Cambridge Institute (CRUK CI) to
-support the genome sequencing operation run by the Genomics Core Facility.
+plotting has been rewritten using R. mga2 was developed by the Bioinformatics
+Core at the Cancer Research UK Cambridge Institute (CRUK CI) to support the
+genome sequencing operation run by the Genomics Core Facility.
 
 ---
 
@@ -103,7 +103,6 @@ mouse samples. A PhiX control has been spiked in.
     SLX-20261.HWTJMDSXY.s_3,fastq/SLX-20261.*.HWTJMDSXY.s_3.r_2.fq.gz,human|mouse,phix
     SLX-20262.HWTJMDSXY.s_4,fastq/SLX-20262.*.HWTJMDSXY.s_4.r_2.fq.gz,human,phix
 
-
 ### Parameter settings
 
 MGA has a number of configuration settings. Run MGA with the `--help` option to
@@ -136,6 +135,23 @@ configuration file, e.g. named `mga.config`, an example of which is shown below.
 The configuration file is specified using the `-c` command line option.
 
     nextflow run crukci-bioinformatics/mga2 -c mga.config
+
+The following parameters can be configured.
+
+parameter             | default value   | description
+----------------------|-----------------|-----------------------------------------
+sampleSheet           | samplesheet.csv | Sample sheet CSV file containing id, fastq (file path/pattern) and species columns
+fastqDir              |                 | Directory in which FASTQ files are located (optional, can specify absolute or relative paths in sample sheet instead)
+sampleSize            |          100000 | Number of sequences to sample for each sample/dataset
+maxNumberToSampleFrom |     10000000000 | Maximum number of sequences to read/sample from
+chunkSize             |         1000000 | Number of sequences for each chunk in batch processing of sampled sequences
+trimStart             |               1 | The position at which the trimmed sequence starts, all bases before this position are trimmed
+trimLength            |              36 | The length of the trimmed sequences
+genomeDetails         | ${projectDir}/resources/genomes.csv | Genome details CSV file containing genome, species and synonym columns
+bowtieIndexDir        | bowtie_indexes  | Directory containing bowtie indexes for reference genomes
+adaptersFasta         | ${projectDir}/resources/adapters.fa | FASTA file containing adapter sequences
+outputDir             | ${launchDir}    | Directory to which output files are written
+outputPrefix          |                 | Prefix for output file names
 
 ---
 
