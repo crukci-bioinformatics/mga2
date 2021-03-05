@@ -171,6 +171,13 @@ files created usin `ln`. Hard links may be preferable to symbolic links when
 using using Docker or Singularity to ensure that the indexes are accessible
 within the container.
 
+Around 30 reference genomes are used when running MGA at CRUK CI. Among these
+are 3 collections of bacterial, viral and fungal genomes. Each of these
+collections contains several thousand genomes within a single bowtie index. MGA
+will highlight bacterial, viral or fungal contamination if such exists but
+inspecting the tabular alignments output file can help to more specifically
+identify which bacterial, viral or fungal species are implicated.
+
 ### Genome metadata
 
 Details about each genome are provided in a genome metadata file. This is a CSV
@@ -198,6 +205,20 @@ Note that the `resources/genomes.csv` file contained in the MGA installation
 directory should not be modified; doing so will prevent updates to the latest
 version of MGA, so instead create a copy within a reference data directory
 elsewhere.
+
+An excerpt from the `genomes.csv` file used at CRUK CI is shown below.
+
+    genome,species,synonyms
+    ath.TAIR10,Arabidopsis thaliana (thale cress),arabidopsis_thaliana | arabidopsis thaliana | thale cress
+    bacteria.NCBI,Bacteria,
+    bta.UMD3.1,Bos taurus (cow),bos_taurus | bos taurus | cow
+    cel.WBcel235,Caenorhabditis elegans (roundworm),caenorhabditis_elegans | caenorhabditis elegans | c elegans
+    cfa.CanFam3.1,Canis familiaris (dog),canis_familiaris | canis familiaris | dog
+    hsa.GRCh38,Homo sapiens (human),homo_sapiens | homo sapiens | human
+    phix.Illumina.RTA,Phi X 174,phix
+
+The bowtie indexes directory contains indexes with prefixes matching the genome
+identifiers in the first column, e.g. `ath.TAIR10.1.ebwt`, `ath.TAIR10.2.ebwt`, ...
 
 ### Adapter sequences
 
