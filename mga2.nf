@@ -4,30 +4,30 @@
 
 def defaults = [
     sampleSheet: 'samplesheet.csv',
-    genomeDetails: "${projectDir}/resources/genomes.csv",
     fastqDir: "",
     sampleSize: 100000,
     maxNumberToSampleFrom: 10000000000,
     chunkSize: 1000000,
     trimStart: 11,
     trimLength: 36,
+    genomeDetails: "${projectDir}/resources/genomes.csv",
     bowtieIndexDir: "bowtie_indexes",
     adaptersFasta: "${projectDir}/resources/adapters.fa",
     outputDir: "${launchDir}",
     outputPrefix: ""
 ]
 
-// set paramters to default settings
+// set parameters to default settings
 
 params.help = false
 params.sampleSheet = defaults.sampleSheet
-params.genomeDetails = defaults.genomeDetails
 params.fastqDir = defaults.fastqDir
 params.sampleSize = defaults.sampleSize
 params.maxNumberToSampleFrom = defaults.maxNumberToSampleFrom
 params.chunkSize = defaults.chunkSize
 params.trimStart = defaults.trimStart
 params.trimLength = defaults.trimLength
+params.genomeDetails = defaults.genomeDetails
 params.bowtieIndexDir = defaults.bowtieIndexDir
 params.adaptersFasta = defaults.adaptersFasta
 params.outputDir = defaults.outputDir
@@ -42,21 +42,22 @@ Multi-Genome Alignment (MGA) Contaminant Screen
 ===============================================
 
 Usage:
-    nextflow run -r main crukci-bioinformatics/mga2
+    nextflow run crukci-bioinformatics/mga2
 
 Options:
-    --help                            Show this message and exit
-    --sample-sheet FILE               Sample sheet CSV file containing id, fastq (file path/pattern) and species columns (default: ${defaults.sampleSheet})
-    --genome-details FILE             Genome details CSV files containing genome, species and synonym columns (default: ${defaults.genomeDetails})
-    --fastq-dir DIR                   Directory in which FASTQ files are located (optional, can specify absolute or relative paths in sample sheet instead)
-    --sample-size INTEGER             Number of sequences to sample for each sample/dataset (default: ${defaults.sampleSize})
-    --chunk-size INTEGER              Number of sequences for each chunk in batch processing of sampled sequences (default: ${defaults.chunkSize})
-    --trim-start INTEGER              The position at which the trimmed sequence starts, all bases before this position are trimmed (default: ${defaults.trimStart})
-    --trim-length INTEGER             The maximum length of the trimmed sequence (default: ${defaults.trimLength})
-    --bowtie-index-dir PATH           Directory containing bowtie indexes for reference genomes (default: ${defaults.bowtieIndexDir})
-    --adapters-fasta FILE             FASTA file containing adapter sequences (default: ${defaults.adaptersFasta})
-    --output-dir PATH                 Output directory (default: ${defaults.outputDir})
-    --output-prefix PREFIX            Prefix for output files (default: ${defaults.outputPrefix})
+    --help                               Show this message and exit
+    --sample-sheet FILE                  Sample sheet CSV file containing id, fastq (file path/pattern) and species columns (default: ${defaults.sampleSheet})
+    --fastq-dir DIR                      Directory in which FASTQ files are located (optional, can specify absolute or relative paths in sample sheet instead)
+    --sample-size INTEGER                Number of sequences to sample for each sample/dataset (default: ${defaults.sampleSize})
+    --max-number-to-sample-from INTEGER  Maximum number of sequences to read/sample from (default: ${defaults.maxNumberToSampleFrom})
+    --chunk-size INTEGER                 Number of sequences for each chunk in batch processing of sampled sequences (default: ${defaults.chunkSize})
+    --trim-start INTEGER                 The position at which the trimmed sequence starts, all bases before this position are trimmed (default: ${defaults.trimStart})
+    --trim-length INTEGER                The maximum length of the trimmed sequence (default: ${defaults.trimLength})
+    --genome-details FILE                Genome details CSV file containing genome, species and synonym columns (default: ${defaults.genomeDetails})
+    --bowtie-index-dir PATH              Directory containing bowtie indexes for reference genomes (default: ${defaults.bowtieIndexDir})
+    --adapters-fasta FILE                FASTA file containing adapter sequences (default: ${defaults.adaptersFasta})
+    --output-dir PATH                    Output directory (default: ${defaults.outputDir})
+    --output-prefix PREFIX               Prefix for output files (default: ${defaults.outputPrefix})
 
 Alternatively, override settings using a configuration file such as the
 following, in which parameter names used are the camelCase equivalent of the
@@ -74,7 +75,20 @@ params.outputPrefix = ""
 and run as follows:
 
 Usage:
-    nextflow run -r main crukci-bioinformatics/mga2 -c mga2.config
+    nextflow run crukci-bioinformatics/mga2 -c mga2.config
+
+Sample sheet           : ${params.sampleSheet}
+FASTQ directory        : ${params.fastqDir}
+Sample size            : ${params.sampleSize}
+Maximum sampled from   : ${params.maxNumberToSampleFrom}
+Chunk size             : ${params.chunkSize}
+Trim start             : ${params.trimStart}
+Trim length            : ${params.trimLength}
+Genomes details file   : ${params.genomeDetails}
+Bowtie index directory : ${params.bowtieIndexDir}
+Adapters FASTA file    : ${params.adaptersFasta}
+Output directory       : ${params.outputDir}
+Output prefix          : ${params.outputPrefix}
     """
     log.info ''
     exit 1
@@ -88,17 +102,20 @@ Multi-Genome Alignment (MGA) Contaminant Screen
 ===============================================
 
 Sample sheet           : ${params.sampleSheet}
-Sample size            : ${params.sampleSize}
 FASTQ directory        : ${params.fastqDir}
+Sample size            : ${params.sampleSize}
+Maximum sampled from   : ${params.maxNumberToSampleFrom}
 Chunk size             : ${params.chunkSize}
 Trim start             : ${params.trimStart}
 Trim length            : ${params.trimLength}
+Genomes details file   : ${params.genomeDetails}
 Bowtie index directory : ${params.bowtieIndexDir}
 Adapters FASTA file    : ${params.adaptersFasta}
 Output directory       : ${params.outputDir}
 Output prefix          : ${params.outputPrefix}
 """
 log.info ''
+
 
 // validate input parameters and calculate minimum sequence length used for sampling sequences
 
