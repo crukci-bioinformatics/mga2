@@ -20,11 +20,13 @@ sampling of FASTQ records (the rate limiting step for very large datasets such
 as NovaSeq S4 flow cells) has been rewritten in Rust and summarization and
 plotting has been rewritten using R.
 
+---
+
 ## Quickstart
 
 1. Install Nextflow
 
-    curl -s https://get.nextflow.io | bash
+    `curl -s https://get.nextflow.io | bash`
 
 2. Create reference data directory and copy or create links to bowtie indexes
 and create a genome metadata file (see below)
@@ -35,7 +37,9 @@ and create a genome metadata file (see below)
 
 5. Run MGA
 
-    nextflow run crukci-bioinformatics/mga2
+    `nextflow run crukci-bioinformatics/mga2`
+
+---
 
 ## Installing MGA
 
@@ -44,12 +48,11 @@ including bowtie and exonerate, are packaged as a [Docker](https://www.docker.co
 container that can be run using either Docker or [Singularity](https://sylabs.io/docs).
 The container is also downloaded by Nextflow. The only requirements are a recent
 version of Nextflow and either Docker or Singularity. Nextflow requires Java 8
-or above and can be installed as follows:
-
-    curl -s https://get.nextflow.io | bash
-
-See the [Nextflow documentation](https://www.nextflow.io/docs/latest/index.html)
+or above and can be installed as shown in the Quickstart section above. See
+the [Nextflow documentation](https://www.nextflow.io/docs/latest/index.html)
 for more details.
+
+---
 
 ## Running MGA
 
@@ -59,12 +62,12 @@ adapter sequences. The adapters file used by default is provided by MGA.
 
 ### Sample sheet
 
-Column   | Description                                                                       | Example
----------|-----------------------------------------------------------------------------------|---------
-id       | Sample name or dataset identifier (must be unique within this sample sheet)       | SLX-19791
-fastq    | Name or path (relative or absolute) for the FASTQ file(s) - can contain wildcards | fastq/SLX-19791.*.r_1.*fq.gz
-species  | Name of species in this sample/dataset (can be a list separated by '\|')           | human
-controls | Name of any spike-in controls present in this dataset                             | phix
+Column   | Description                                                                 | Example
+---------|-----------------------------------------------------------------------------|---------
+id       | Sample name or dataset identifier (must be unique within this sample sheet) | SLX-19791
+fastq    | Name or path (relative or absolute) for the FASTQ file(s)                   | fastq/SLX-19791.*.r1.fq.gz
+species  | Name of species in this sample/dataset (can be a list separated by '\|')    | human
+controls | Name of any spike-in controls present in this dataset                       | phix
 
 Multiple species of controls can be specified in each dataset, provided as a
 list separated by the '|' character.
@@ -92,7 +95,9 @@ For example to set the trimming start position so that the trimmed (retained)
 part of the sequence to be aligned to reference genomes starts at position 21
 within each sampled sequence, the `trimStart` parameter can be set as follows:
 
-    nextflow run crukci-bioinformatics/mga2 --trim-start=21
+    nextflow run crukci-bioinformatics/mga2 --trim-start 21
+
+or alternatively using the camelCase name (`--trimStart 21`).
 
 A more convenient way of configuring several parameters is to use a
 configuration file, e.g. named `mga.config`, an example of which is shown below.
@@ -107,6 +112,9 @@ configuration file, e.g. named `mga.config`, an example of which is shown below.
         outputDir      = "mga"
     }
 
+The configuration file is specified using the `-c` command line option.
+
+    nextflow run crukci-bioinformatics/mga2 -c mga.config
 
 #### Trimming
 
@@ -114,13 +122,15 @@ TODO note on appropriate trimming for different types of sequencing run
 
 TODO note that trimming currently cannot be specified per-sample/dataset
 
-### Using Docker of Singularity
+### Using Docker or Singularity
 
 TODO
 
 ### Profiles
 
 TODO
+
+---
 
 ## Reference data
 
@@ -198,6 +208,8 @@ directory should not be modified; doing so will prevent updates to the latest
 version of MGA, so instead create a copy within a reference data directory
 elsewhere.
 
+---
+
 ## Output files
 
 File                          | Description
@@ -268,6 +280,8 @@ bowtie while matches to adapters is performed for the entire read. It is
 possible for a read to be counted both as aligned to one or more of the
 reference genomes and among the reads containing adapter sequence.
 
+---
+
 ## Updating MGA
 
 Nextflow detects when there is a more recent version of MGA available and
@@ -278,6 +292,8 @@ displays to this effect such as the following:
 To update MGA run the following command:
 
     nextflow pull crukci-bioinformatics/mga2 
+
+---
 
 ## Requirements 
 
