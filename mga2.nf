@@ -66,12 +66,12 @@ Options:
     --max-number-to-sample-from   Maximum number of sequences to read/sample from
     --chunk-size                  Number of sequences for each chunk in batch processing of sampled sequences
     --trim-start                  The position at which the trimmed sequence starts, all bases before this position are trimmed
-    --trim-length                 The maximum length of the trimmed sequence
+    --trim-length                 The length of the trimmed sequences
     --genome-details              Genome details CSV file containing genome, species and synonym columns
     --bowtie-index-dir            Directory containing bowtie indexes for reference genomes
     --adapters-fasta              FASTA file containing adapter sequences
-    --output-dir                  Output directory
-    --output-prefix               Prefix for output files
+    --output-dir                  Directory to which output files are written
+    --output-prefix               Prefix for output file names
 
 Alternatively, override settings using a configuration file such as the
 following, in which parameter names used are the camelCase equivalent of the
