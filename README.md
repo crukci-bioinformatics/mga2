@@ -24,7 +24,7 @@ plotting has been rewritten using R.
 
 1. Install Nextflow
 
-    `curl -s https://get.nextflow.io | bash`
+    curl -s https://get.nextflow.io | bash
 
 2. Create reference data directory and copy or create links to bowtie indexes
 and create a genome metadata file (see below)
@@ -35,7 +35,7 @@ and create a genome metadata file (see below)
 
 5. Run MGA
 
-    `nextflow run crukci-bioinformatics/mga2`
+    nextflow run crukci-bioinformatics/mga2
 
 ## Installing MGA
 
@@ -48,8 +48,8 @@ or above and can be installed as follows:
 
     curl -s https://get.nextflow.io | bash
 
-See the [Nextflow](https://www.nextflow.io/index.html) documentation for more
-details.
+See the [Nextflow documentation](https://www.nextflow.io/docs/latest/index.html)
+for more details.
 
 ## Running MGA
 
@@ -63,7 +63,7 @@ Column   | Description                                                          
 ---------|-----------------------------------------------------------------------------------|---------
 id       | Sample name or dataset identifier (must be unique within this sample sheet)       | SLX-19791
 fastq    | Name or path (relative or absolute) for the FASTQ file(s) - can contain wildcards | fastq/SLX-19791.*.r_1.*fq.gz
-species  | Name of species in this sample/dataset (can be a list separated by '|')           | human
+species  | Name of species in this sample/dataset (can be a list separated by '\|')           | human
 controls | Name of any spike-in controls present in this dataset                             | phix
 
 Multiple species of controls can be specified in each dataset, provided as a
