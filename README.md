@@ -254,7 +254,14 @@ necessary to specify this separately with the  `-with-singularity` option.
 
 ### Pipeline summary reports
 
-TODO details of Nextflow job summary and timeline reports
+Nextflow can provide very useful reports detailing the completion status,
+execution time and memory used by each task, both as a report containing box
+plots for each process/task type and a summary table and as a timeline plot.
+
+Use the `-with-report` and `-with-timeline` command line options to produce
+these reports when running MGA.
+
+     nextflow run crukci-bioinformatics/mga2 -c mga.config -with-report mga.report.html --with-timeline mga.timeline.html
 
 ---
 
@@ -396,7 +403,10 @@ components and tools.
 
 * bowtie
 * exonerate
-* R 4.0.4 or above and tidyverse, optparse and svglite packages
+* R 4.0.4 or above and the following packages
+    * tidyverse
+    * optparse
+    * svglite
 * `sample-fastq` and `trim-and-split-fastq` tools
 
 The `sample-fastq` and `trim-and-split-fastq` tools are written in Rust and
