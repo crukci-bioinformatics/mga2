@@ -54,7 +54,7 @@ for more details.
 
 ---
 
-## Running MGA
+## Configuring MGA
 
 MGA requires a sample sheet file, a set of reference genomes indexed for bowtie,
 a file providing some details about these genomes and a file containing a set of
@@ -83,7 +83,7 @@ the `fastqDir` parameter if set to all FASTQ file names or paths givin in the
 A FASTQ file name pattern can be specified using wildcard characters ('*') if
 the data for a given sample or dataset are split across multiple FASTQ files.
 
-### Configuring MGA
+### Parameter settings
 
 MGA has a number of configuration settings. Run MGA with the `--help` option to
 see usage instructions and details of each.
@@ -115,20 +115,6 @@ configuration file, e.g. named `mga.config`, an example of which is shown below.
 The configuration file is specified using the `-c` command line option.
 
     nextflow run crukci-bioinformatics/mga2 -c mga.config
-
-#### Trimming
-
-TODO note on appropriate trimming for different types of sequencing run
-
-TODO note that trimming currently cannot be specified per-sample/dataset
-
-### Using Docker or Singularity
-
-TODO
-
-### Profiles
-
-TODO
 
 ---
 
@@ -210,6 +196,18 @@ elsewhere.
 
 ---
 
+## Running MGA
+
+### Using Docker or Singularity
+
+TODO
+
+### Profiles
+
+TODO
+
+---
+
 ## Output files
 
 File                          | Description
@@ -232,21 +230,6 @@ might be useful for prepending an identifier for the run or flow cell to the
 output file names, e.g.
 
     nextflow run crukci-bioinformatics/mga2 --output-prefix="H3MTJDRXY"
-
-### Assigning reads to genomes
-
-Sequence reads will often align to more than one reference genome. MGA assigns
-reads to the genome with the fewest mismatches. If a read aligns with the same
-lowest number of mismatches to multiple genomes, then the following method is
-used to assign reads to a single genome.
-
-1. Count number of reads aligning to each genome within a sample or dataset including only those alignments with the fewest mismatches for each read
-
-2. Rank genomes in priority order based on these counts
-
-3. If the read aligns to one or more of the expected genomes, i.e. for a species or control specified in the sample sheet, then assign it to the expected genome with the highest rank, regardless of there being a higher-ranking genome for an expected species. Priority is given to expected over unexpected species.
-
-4. If the read doesn't align to one of the expected genomes, assign it to the genome with the highest rank
 
 ### Summary plot
 
@@ -279,6 +262,58 @@ Subsequences of reads following trimming are aligned to reference genomes using
 bowtie while matches to adapters is performed for the entire read. It is
 possible for a read to be counted both as aligned to one or more of the
 reference genomes and among the reads containing adapter sequence.
+
+---
+
+## MGA Implementation Details
+
+### Assigning reads to genomes
+
+Sequence reads will often align to more than one reference genome. MGA assigns
+reads to the genome with the fewest mismatches. If a read aligns with the same
+lowest number of mismatches to multiple genomes, then the following method is
+used to assign reads to a single genome.
+
+1. Count number of reads aligning to each genome within a sample or dataset including only those alignments with the fewest mismatches for each read
+
+2. Rank genomes in priority order based on these counts
+
+3. If the read aligns to one or more of the expected genomes, i.e. for a species or control specified in the sample sheet, then assign it to the expected genome with the highest rank, regardless of there being a higher-ranking genome for an expected species. Priority is given to expected over unexpected species.
+
+4. If the read doesn't align to one of the expected genomes, assign it to the genome with the highest rank
+
+### Trimming sequence reads
+
+By default the first 36 bases of each sequence read are aligned to the
+reference genomes. Bowtie is used for genomic alignment in MGA because it is
+fast but part of the reason for this is that it performs an ungapped alignment.
+Trimming reads to 36 bases not only helps reduce the computational expense of
+aligning reads to multiple genomes but also offers a better chance that reads
+will map to their expected genomes; longer reads are more likely to require
+gapped alignments.
+
+Furthermore, MGA was written primarily to support the Genomic Core Facility
+within the Cancer Research UK Cambridge Institute. Trimming to a fixed sequence
+length allows for a more direct comparison of mapping and error rates across
+sequencing runs that may have very different read lengths.
+
+While trimming to the first 36 bases will work in many cases, there are some
+sequencing libraries in which the beginning of the read contains non-genomic
+tags, e.g. Unique Molecular Identifiers (UMIs) or cell hashtags in multiplexed
+single cell library pools. MGA provides the option for setting the start
+position within reads for the trimmed/retained portion of the read used for
+genomic alignment as well as the length of the trimmed sequence.
+
+Reads that are too short for the specified trimming options are excluded
+during the sampling step. Setting trimming options inappropriately can lead to
+no reads being sampled.
+
+Trimming options are specified for all samples or datasets in a single MGA run;
+it is not currently possible to set trimming start positions and/or lengths for
+each sample separately.
+
+Note that the adapter matching using exonerate is performed for the full-length
+sequence, not the trimmed sequence.
 
 ---
 
