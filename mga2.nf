@@ -23,77 +23,10 @@ params.outputDir             = "${launchDir}"
 params.outputPrefix          = ""
 
 
-// ----------------------------------------------------------------------------
-// summary of configuration parameters
-// -----------------------------------
-
-log.info ""
-log.info """\
-Multi-Genome Alignment (MGA) Contaminant Screen
-===============================================
-
-Sample sheet           : ${params.sampleSheet}
-FASTQ directory        : ${params.fastqDir}
-Sample size            : ${params.sampleSize}
-Maximum sampled from   : ${params.maxNumberToSampleFrom}
-Chunk size             : ${params.chunkSize}
-Trim start             : ${params.trimStart}
-Trim length            : ${params.trimLength}
-Genomes details file   : ${params.genomeDetails}
-Bowtie index directory : ${params.bowtieIndexDir}
-Adapters FASTA file    : ${params.adaptersFasta}
-Output directory       : ${params.outputDir}
-Output prefix          : ${params.outputPrefix}
-"""
-log.info ""
-
-
-// ----------------------------------------------------------------------------
-// help/usage
-// ----------
+printParameterSummary()
 
 if (params.help) {
-    log.info ""
-    log.info """\
-Usage:
-    nextflow run crukci-bioinformatics/mga2
-
-Options:
-    --help                        Show this message and exit
-    --sample-sheet                Sample sheet CSV file containing id, fastq (file path/pattern) and species columns
-    --fastq-dir                   Directory in which FASTQ files are located (optional, can specify absolute or relative paths in sample sheet instead)
-    --sample-size                 Number of sequences to sample for each sample/dataset
-    --max-number-to-sample-from   Maximum number of sequences to read/sample from
-    --chunk-size                  Number of sequences for each chunk in batch processing of sampled sequences
-    --trim-start                  The position at which the trimmed sequence starts, all bases before this position are trimmed
-    --trim-length                 The length of the trimmed sequences
-    --genome-details              Genome details CSV file containing genome, species and synonym columns
-    --bowtie-index-dir            Directory containing bowtie indexes for reference genomes
-    --adapters-fasta              FASTA file containing adapter sequences
-    --output-dir                  Directory to which output files are written
-    --output-prefix               Prefix for output file names
-
-Alternatively, override settings using a configuration file such as the
-following, in which parameter names used are the camelCase equivalent of the
-above options:
-
-params {
-    sampleSheet    = "samplesheet.csv"
-    sampleSize     = 100000
-    trimStart      = 11
-    trimLength     = 36
-    genomeDetails  = "genomes.csv"
-    bowtieIndexDir = "/path_to/bowtie_indexes"
-    outputDir      = "mga"
-    outputPrefix   = ""
-}
-
-and run as follows:
-
-Usage:
-    nextflow run crukci-bioinformatics/mga2 -c mga2.config
-    """
-    log.info ""
+    helpMessage()
     exit 0
 }
 
@@ -320,12 +253,10 @@ process create_summary {
 workflow {
 
     install_dir = channel.fromPath(projectDir, checkIfExists: true)
-
-    samples = channel.fromPath(params.sampleSheet, checkIfExists: true)
-
+    sample_sheet = channel.fromPath(params.sampleSheet, checkIfExists: true)
     genome_details = channel.fromPath(params.genomeDetails, checkIfExists: true)
-
-    bowtie_index_dir = channel.fromPath("${params.bowtieIndexDir}", checkIfExists: true)
+    bowtie_index_dir = channel.fromPath(params.bowtieIndexDir, checkIfExists: true)
+    adapters_fasta = channel.fromPath(params.adaptersFasta, checkIfExists: true)
 
     genomes = channel
         .fromPath("${params.bowtieIndexDir}/*.rev.1.ebwt", checkIfExists: true)
@@ -335,12 +266,10 @@ workflow {
 
     check_inputs(
         install_dir,
-        samples,
+        sample_sheet,
         genome_details,
         bowtie_index_list
     )
-
-    adapters_fasta = channel.fromPath("${params.adaptersFasta}", checkIfExists: true)
 
     fastq = check_inputs.out.samples
         .splitCsv(header: true, quote: '"')
@@ -380,3 +309,75 @@ workflow {
     )
 }
 
+
+// ----------------------------------------------------------------------------
+// summary of configuration parameters
+// -----------------------------------
+
+def printParameterSummary() {
+    log.info ""
+    log.info """
+        Multi-Genome Alignment (MGA) Contaminant Screen
+        ===============================================
+
+        Sample sheet           : ${params.sampleSheet}
+        FASTQ directory        : ${params.fastqDir}
+        Sample size            : ${params.sampleSize}
+        Maximum sampled from   : ${params.maxNumberToSampleFrom}
+        Chunk size             : ${params.chunkSize}
+        Trim start             : ${params.trimStart}
+        Trim length            : ${params.trimLength}
+        Genomes details file   : ${params.genomeDetails}
+        Bowtie index directory : ${params.bowtieIndexDir}
+        Adapters FASTA file    : ${params.adaptersFasta}
+        Output directory       : ${params.outputDir}
+        Output prefix          : ${params.outputPrefix}
+    """.stripIndent()
+    log.info ""
+}
+
+
+// ----------------------------------------------------------------------------
+// help/usage
+// ----------
+
+def helpMessage() {
+    log.info """
+        Usage:
+            nextflow run crukci-bioinformatics/mga2
+
+        Options:
+            --help                        Show this message and exit
+            --sample-sheet                CSV file containing details of sample dataset (id, fastq, species and control columns required)
+            --fastq-dir                   Directory in which FASTQ files are located (optional, can specify absolute or relative paths in sample sheet instead)
+            --sample-size                 Number of sequences to sample for each sample/dataset
+            --max-number-to-sample-from   Maximum number of sequences to read/sample from
+            --chunk-size                  Number of sequences for each chunk for batch alignment of sampled sequences
+            --trim-start                  The position at which the trimmed sequence starts, all bases before this position are trimmed
+            --trim-length                 The length of the trimmed sequences
+            --genome-details              CSV file containing the species name and synonyms for each reference genome (genome, species and synonym colums required)
+            --bowtie-index-dir            Directory containing bowtie indexes for reference genomes
+            --adapters-fasta              FASTA file containing adapter sequences
+            --output-dir                  Directory to which output files are written
+            --output-prefix               Prefix for output file names
+
+        Alternatively, override settings using a configuration file such as the
+        following, in which parameter names used are the camelCase equivalent of the
+        above options:
+
+        params {
+            sampleSheet    = "samplesheet.csv"
+            sampleSize     = 100000
+            trimStart      = 11
+            trimLength     = 36
+            genomeDetails  = "genomes.csv"
+            bowtieIndexDir = "/path_to/bowtie_indexes"
+            outputDir      = "mga"
+            outputPrefix   = ""
+        }
+
+        and run as follows:
+            nextflow run crukci-bioinformatics/mga2 -c mga2.config
+    """.stripIndent()
+    log.info ""
+}
