@@ -1,26 +1,30 @@
-# Multi-genome alignment (MGA) contaminant screen for high-throughput sequence data
+# Multi-genome alignment (MGA) contaminant screen for DNA/RNA sequencing data
 
-MGA is a quality control tool for high-throughput sequence data. It screens for
-contaminants by aligning sequence reads in FASTQ format against a series of
+MGA is a quality control tool for high-throughput sequencing data. It screens
+for contaminants by aligning sequence reads in FASTQ format against a series of
 reference genomes using [bowtie](http://bowtie-bio.sourceforge.net/index.shtml)
 and against a set of adapter sequences using
 [exonerate](https://www.ebi.ac.uk/about/vertebrate-genomics/software/exonerate).
 
 MGA samples a subset of the reads, by default 100000, prior to alignment against
-reference genome sequences and adapters to reduce the computational effort and
-run time. In addition, reads are trimmed to 36 bases by default, prior to
-alignment against the reference genomes using bowtie with the aim of minimizing
-the run time and ensuring consistency of the resulting mapping and error rates
-across sequencing runs with differing read lengths. Full length reads are
-used for matching adapter sequences using exonerate.
+reference genome sequences and adapters, providing a fast screen for unexpected
+sequence content with minimal computational effort. Sequence reads are trimmed
+to 36 bases by default, prior to alignment against the reference genomes using
+bowtie with the aim of minimizing the run time and ensuring consistency of the
+resulting mapping and error rates across sequencing runs with differing read
+lengths. Full length reads are used for matching adapter sequences using
+exonerate.
 
 mga2 is a rewrite of the original [MGA](https://github.com/crukci-bioinformatics/MGA)
 in which the workflow has been ported to [Nextflow](https://www.nextflow.io/index.html),
 sampling of FASTQ records (the rate limiting step for very large datasets such
-as NovaSeq S4 flow cells) has been rewritten in Rust and summarization and
-plotting has been rewritten using R. mga2 was developed by the Bioinformatics
-Core at the Cancer Research UK Cambridge Institute (CRUK CI) to support the
-genome sequencing operation run by the Genomics Core Facility.
+as NovaSeq S4 flow cells) has been rewritten in Rust, and summarization and
+plotting have been rewritten using R. mga2 was developed by the
+[Bioinformatics Core](https://www.cruk.cam.ac.uk/core-facilities/bioinformatics-core)
+at the [Cancer Research UK Cambridge Institute](https://www.cruk.cam.ac.uk/)
+(CRUK CI) to support the genome sequencing operation run by the
+[Genomics Core](https://www.cruk.cam.ac.uk/core-facilities/genomics-core)
+facility.
 
 ---
 
@@ -37,7 +41,7 @@ and create a genome metadata file named `genomes.csv`
 
 4. Create a configuration file named `mga.config` specifying parameter settings
 
-5. Run MGA optionally specifying an execution profile and whether to use Docker or Singularity
+5. Run MGA specifying the configuration file and, optionally, an execution profile
 
     `nextflow run crukci-bioinformatics/mga2 -c mga.config -profile cluster`
 
@@ -76,22 +80,19 @@ fastq    | Name or path (relative or absolute) for the FASTQ file(s)            
 species  | Name of species in this sample/dataset (can be a list separated by '\|')    | human
 controls | Name of any spike-in controls present in this dataset                       | phix
 
-Multiple species of controls can be specified in each dataset, provided as a
+Multiple species or controls can be specified for each dataset, provided as a
 list separated by the '|' character.
 
-The fastq column can contain relative or absolute paths or may contain solely
+The fastq column can contain relative or absolute paths or may contain just
 the names of the FASTQ files with the FASTQ directory specified using the
 `--fastq-dir` command line option or with the `fastqDir` parameter in a config
-file. Only one FASTQ directory can be specified using this parameter so all
-FASTQ files will have to reside within that directory if set. MGA will prepend
-the `fastqDir` parameter if set to all FASTQ file names or paths givin in the
-`fastq` column.
+file. MGA will prepend the `fastqDir` parameter, if set, to all FASTQ file names
+or paths given in the `fastq` column.
 
-A FASTQ file name pattern can be specified using wildcard characters ('*') if
-the data for a given sample or dataset are split across multiple FASTQ files.
+A pattern matching multiple FASTQ files can be specified using the wildcard
+character, '*'.
 
-The following example sample sheet file is for 4 lanes of a NovaSeq S4 flow
-cell.
+The following example is a sample sheet for a 4-lane flow cell.
 
     id,fastq,species,controls
     SLX-20261.HWTJMDSXY.s_1,fastq/SLX-20261.*.HWTJMDSXY.s_1.r_2.fq.gz,human|mouse,phix
@@ -99,11 +100,14 @@ cell.
     SLX-20261.HWTJMDSXY.s_3,fastq/SLX-20261.*.HWTJMDSXY.s_3.r_2.fq.gz,human|mouse,phix
     SLX-20262.HWTJMDSXY.s_4,fastq/SLX-20262.*.HWTJMDSXY.s_4.r_2.fq.gz,human,phix
 
-This run contains two multiplexed pools of sequencing libraries for many
-samples, one of which is run on the first 3 lanes. The FASTQ files are in a
-subdirectory named `fastq` and the wildcard character is used to sample records
-from all matching FASTQ files. The SLX-20261 pool contains libraries from both
-human and mouse samples.  A PhiX control has been spiked into each lane.
+This run contains two multiplexed pools of sequencing libraries with the first
+pool run on lanes 1 - 3 and the other on lane 4. The FASTQ files are located in
+a subdirectory named `fastq` and the wildcard character is used to include all
+matching FASTQ files. Note that records are sampled from the second read ('r_2')
+of each lane in this case as these pools contain 10X Genomics single cell
+RNA-seq libraries. The SLX-20261 pool contains libraries from both human and
+mouse samples so both are included as expected species. A PhiX control has been
+spiked into each lane.
 
 ### Parameter settings
 
@@ -142,11 +146,11 @@ The following parameters can be configured.
 
 parameter             | default value   | description
 ----------------------|-----------------|-----------------------------------------
-sampleSheet           | samplesheet.csv | Sample sheet CSV file containing id, fastq (file path/pattern) and species columns
+sampleSheet           | samplesheet.csv | CSV file containing details of sample dataset (id, fastq, species and control columns required)
 fastqDir              |                 | Directory in which FASTQ files are located (optional, can specify absolute or relative paths in sample sheet instead)
 sampleSize            |          100000 | Number of sequences to sample for each sample/dataset
 maxNumberToSampleFrom |     10000000000 | Maximum number of sequences to read/sample from
-chunkSize             |         1000000 | Number of sequences for each chunk in batch processing of sampled sequences
+chunkSize             |         1000000 | Number of sequences for each chunk for batch alignment of sampled sequences
 trimStart             |               1 | The position at which the trimmed sequence starts, all bases before this position are trimmed
 trimLength            |              36 | The length of the trimmed sequences
 genomeDetails         | ${projectDir}/resources/genomes.csv | Genome details CSV file containing genome, species and synonym columns
@@ -154,6 +158,10 @@ bowtieIndexDir        | bowtie_indexes  | Directory containing bowtie indexes fo
 adaptersFasta         | ${projectDir}/resources/adapters.fa | FASTA file containing adapter sequences
 outputDir             | ${launchDir}    | Directory to which output files are written
 outputPrefix          |                 | Prefix for output file names
+
+Note that `${projectDir}` and `${launchDir}` are Nextflow variables that
+correspond to the MGA installation directory and the directory in which MGA is
+run respectively.
 
 ---
 
@@ -174,7 +182,8 @@ follows:
 The second argument is the basename of the index files to write. A genome
 details file (`genomes.csv`) maps the basename for each indexed genome to a
 more user-friendly name for the species and provides synonyms used for looking
-up the species expected for each sample or dataset given in the sample sheet.
+up the species expected for each sample or dataset as entered in the sample
+sheet.
 
 MGA looks for the bowtie indexes in a single directory. By default, MGA expects
 this to be called `bowtie_indexes`, a subdirectory within the current working
@@ -183,11 +192,10 @@ can be used for multiple runs of MGA on different datasets.
 
 It is quite common for bowtie indexes to be arranged in a directory structure
 that contains separate directories for each genome, alongside other files such
-as the FASTA files for the reference genome or indexes for other aligners. In
-this scenario, a bowtie_indexes directory can be created with links to these
-files created usin `ln`. Hard links may be preferable to symbolic links when
-using using Docker or Singularity to ensure that the indexes are accessible
-within the container.
+as the FASTA files for the reference genome and indexes for other aligners. The
+bowtie_indexes directory can be created with links to these files created using
+`ln`. Hard links may be preferable to symbolic links when using using Docker or
+Singularity to ensure that the indexes are accessible within the container.
 
 Around 30 reference genomes are used when running MGA at CRUK CI. Among these
 are 3 collections of bacterial, viral and fungal genomes. Each of these
@@ -214,15 +222,12 @@ species  | Species name used in reports           | Danio rerio (zebrafish)
 synonyms | Synonyms used to match terms in the species and controls columns in the sample sheet | Danio rerio \| D rerio \| D. rerio \| zebrafish
 
 Multiple synonyms for a genome are permitted, provided as a list separated by the
-'|' character.
-
-Synonym matching is case-insensitive. MGA will terminate with an error if the
-same synonym is used for more than one genome.
+'|' character. Synonym matching is case-insensitive.
 
 Note that the `resources/genomes.csv` file contained in the MGA installation
-directory should not be modified; doing so will prevent updates to the latest
-version of MGA, so instead create a copy within a reference data directory
-elsewhere.
+directory should not be modified; doing so will prevent updating of MGA to the
+latest version using the `nextflow pull` command (see later section); instead
+create a copy within a reference data directory elsewhere.
 
 An excerpt from the `genomes.csv` file used at CRUK CI is shown below.
 
@@ -250,9 +255,9 @@ needed a custom adapters FASTA file can be specified using the
 parameter in a config file.
 
 Note that the `resources/adapters.fa` file contained in the MGA installation
-directory should not be modified; doing so will prevent updates to the latest
-version of MGA, so instead create a copy within a reference data directory
-elsewhere.
+directory should not be modified; doing so will prevent updating of MGA to the
+latest version using the `nextflow pull` command (see later section); instead
+create a copy within a reference data directory elsewhere.
 
 ---
 
@@ -277,14 +282,25 @@ When using Singularity, MGA assumes that the user bind control feature is
 enabled and sets the `singularity.autoMounts = true` in the Nextflow
 configuration file. See the Nextflow documentation for more details on this.
 
+Alternatively, you can specify that Docker is to be used by adding the following
+line to the config file:
+
+    docker.enabled = true
+
+Similarly, to enable Singularity, instead add the following line:
+
+    singularity.enabled = true
+
+These can also be added as part of an execution profile (see next section).
+
 ### Profiles
 
 Resource settings are configured using Nextflow profiles. MGA provides three
 profiles - `standard`, `bigserver` and `cluster` configured for running on
 servers and the high-performance compute cluster at CRUK CI. These specify
 the maximum number of CPUs or memory that can be used at any one time during
-the pipeline run or the number of maximum number of jobs that can be submitted
-to the cluster to be run in parallel.
+the pipeline run or the maximum number of jobs that can be submitted to the
+cluster to be run in parallel.
 
 A custom profile can be created in the configuration file, e.g. `mga.config`,
 an example of which is shown below.
@@ -294,6 +310,7 @@ an example of which is shown below.
         process.executor = 'slurm'
         executor {
             queueSize = 25
+            queue = 'large'
             pollInterval = 30.sec
             jobName = { "'$task.name'" }
         }
@@ -303,23 +320,41 @@ an example of which is shown below.
 This profile can be specified using the `-profile` command line option.
 
     nextflow run crukci-bioinformatics/mga2 -c mga.config -profile myprofile
-    
+
 With this profile, Nextflow will submit jobs to cluster nodes using the SLURM
-resource manager. A maximum number of 25 jobs that will be submitted for running
-in parallel and Nextflow will poll every 30 seconds for completed jobs. Use of
-Singularity for running jobs using the mga2 container is enabled and it is not
-necessary to specify this separately with the  `-with-singularity` option.
+resource manager. A maximum number of 25 jobs that will be submitted to the
+'large' queue for running in parallel and Nextflow will poll every 30 seconds
+to check for completed jobs. Use of Singularity for running jobs using the mga2
+container is enabled so it is not necessary to specify this separately with the
+`-with-singularity` option.
 
-### Pipeline summary reports
+### Nextflow reports
 
-Nextflow can provide very useful reports detailing the completion status,
-execution time and memory used by each task, both as a report containing box
-plots for each process/task type and a summary table and as a timeline plot.
+Nextflow can provide a useful summary report detailing the completion status,
+execution time and memory used by each task, and a timeline chart.
 
 Use the `-with-report` and `-with-timeline` command line options to produce
-these reports when running MGA.
+these reports when running MGA, e.g.
 
      nextflow run crukci-bioinformatics/mga2 -c mga.config -with-report mga.report.html --with-timeline mga.timeline.html
+
+### Nextflow log files and work directories
+
+Nextflow logs information to a hidden file named `.nextflow.log` in the launch
+directory in which MGA is run. This can contain useful informations that can
+help with debugging problems with running MGA. It will, for example, show which
+task(s) failed and the directory in which that task was run.
+
+Nextflow runs each task within its own directory. These directories are created
+under a directory named `work`. Each task run directory contains hidden files
+with names such as `.command.sh` and `.command.out`, which can be helpful in
+debugging Nextflow pipelines.
+
+The work directories contain intermediate files produced when running MGA. The
+final outputs are written either to the launch directory or the directory
+specified using `--output-dir` or the `outputDir` parameter. The `work`
+directory can be deleted on successful completion of the MGA pipeline unless
+other Nextflow pipelines are also being run from the launch directory.
 
 ---
 
@@ -327,9 +362,9 @@ these reports when running MGA.
 
 File                          | Description
 ------------------------------|------------------------------
-mga_summary.csv               | Summary of the number of sequences for each sample/dataset, the number sampled and the the percentage aligning to the expected species and controls along with error/mismatch rates
+mga_summary.csv               | Summary of the number of sequences for each sample/dataset, the number sampled and the percentage aligning to the expected species and controls along with error/mismatch rates
 mga_alignment_summary.csv     | Summary of the number of sampled sequences for each sample/dataset aligned to each genome along with error/mismatch rates, also the numbers of sequences assigned to each genome
-mga_alignment_bar_chart.png   | Stacked bar chart summarizing the numbers of sequences assigning to each genome
+mga_alignment_bar_chart.png   | Stacked bar chart summarizing the numbers of sequences assigned to each genome
 mga_alignment_bar_chart.svg   | Stacked bar chart as SVG file
 mga_alignment_bar_chart.pdf   | Stacked bar chart as PDF file
 mga_genome_alignments.tsv.gz  | Table containing alignments with the fewest mismatches for each of the sampled sequences
@@ -355,7 +390,7 @@ assigned and a segment for unmapped reads. The total size of the bar represents
 the total number of sequences; the sizes of the segments are based on the sample
 of reads and have been scaled accordingly.
 
-The bars are displayed in green for expected species, gold for controls and red
+The bars are coloured green for expected species, gold for controls and red
 for unexpected species, i.e. possible contaminants.
 
 The transparency of each segment represents the error or mismatch rate for the
@@ -374,26 +409,28 @@ but the length of the adapter sequence at the end of the read is too short to be
 matched.
 
 Subsequences of reads following trimming are aligned to reference genomes using
-bowtie while matches to adapters is performed for the entire read. It is
-possible for a read to be counted both as aligned to one or more of the
+bowtie while matches to adapters are performed for the full, untrimmed read. It
+is possible for a read to be counted both as aligned to one or more of the
 reference genomes and among the reads containing adapter sequence.
 
 ---
 
-## MGA Implementation Details
+## MGA Design and Implementation Details
 
 ### Assigning reads to genomes
 
 Sequence reads will often align to more than one reference genome. MGA assigns
 reads to the genome with the fewest mismatches. If a read aligns with the same
-lowest number of mismatches to multiple genomes, then the following method is
-used to assign reads to a single genome.
+samllest number of mismatches to multiple genomes, then the following method is
+used to assign reads to one of the best-matching genomes.
 
-1. Count number of reads aligning to each genome within a sample or dataset including only those alignments with the fewest mismatches for each read
+1. Select alignments for each read with the fewest mismatches for that read; discard the sub-optimal alignments
 
-2. Rank genomes in priority order based on these counts
+2. Count the number of reads aligning to each genome, using only the 'best' alignments resulting from filtering in step 1
 
-3. If the read aligns to one or more of the expected genomes, i.e. for a species or control specified in the sample sheet, then assign it to the expected genome with the highest rank, regardless of there being a higher-ranking genome for an expected species. Priority is given to expected over unexpected species.
+3. Rank genomes in priority order based on these counts
+
+4. If the read aligns to one or more of the expected genomes, i.e. for a species or control specified in the sample sheet, then assign it to the expected genome with the highest rank, regardless of there being a higher-ranking genome for an unexpected species - priority is given to expected over unexpected species
 
 4. If the read doesn't align to one of the expected genomes, assign it to the genome with the highest rank
 
@@ -412,12 +449,12 @@ at CRUK CI. Trimming to a fixed sequence length allows for a more direct
 comparison of mapping and error rates across sequencing runs that may have very
 different read lengths.
 
-While trimming to the first 36 bases will work in many cases, there are some
-sequencing libraries in which the beginning of the read contains non-genomic
-tags, e.g. Unique Molecular Identifiers (UMIs) or cell hashtags in multiplexed
-single cell library pools. MGA provides the option for setting the start
-position within reads for the trimmed/retained portion of the read used for
-genomic alignment as well as the length of the trimmed sequence.
+While trimming to the first 36 bases of reads will work in many cases, there are
+some sequencing libraries in which the beginning of the read contains
+non-genomic tags, e.g. Unique Molecular Identifiers (UMIs) or cell hashtags in
+multiplexed single cell library pools. MGA provides the option for setting the
+start position within reads for the trimmed/retained portion of the read used
+for genomic alignment as well as the length of the trimmed sequence.
 
 Reads that are too short for the specified trimming options are excluded
 during the sampling step. Setting trimming options inappropriately can lead to
@@ -435,7 +472,7 @@ sequence, not the trimmed sequence.
 ## Updating MGA
 
 Nextflow detects when there is a more recent version of MGA available and
-displays to this effect such as the following:
+display a message to this effect such as the following:
 
     NOTE: Your local project version looks outdated - a different revision is available in the remote repository [961d1d72a2]
 
@@ -459,8 +496,8 @@ components and tools.
 
 ## Components
 
-* bowtie
-* exonerate
+* bowtie 1.3.0 (not bowtie2)
+* exonerate 2.4.0
 * R 4.0.4 or above and the following packages
     * tidyverse
     * optparse
