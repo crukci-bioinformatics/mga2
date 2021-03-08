@@ -4,9 +4,9 @@
 nextflow.enable.dsl = 2
 
 
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // default parameter settings
-// --------------------------
+// -----------------------------------------------------------------------------
 
 params.help                  = false
 params.sampleSheet           = "samplesheet.csv"
@@ -31,58 +31,41 @@ if (params.help) {
 }
 
 
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // validate input parameters
-// -------------------------
+// -----------------------------------------------------------------------------
 
-fastqDir = "${params.fastqDir}"
-if (!"${fastqDir}".isEmpty() && !"${fastqDir}".endsWith("/")) {
-    fastqDir = "${fastqDir}/"
+if (!params.fastqDir.isEmpty() && !params.fastqDir.endsWith("/")) {
+    params.fastqDir = "${params.fastqDir}/"
 }
 
-if (!"${params.sampleSize}".isInteger() || "${params.sampleSize}" as Integer < 1000) {
+if (params.sampleSize < 1000) {
     exit 1, "Invalid sample size - set to at least 1000 (100000 recommended)"
 }
 
-if (!"${params.maxNumberToSampleFrom}".isLong() || "${params.maxNumberToSampleFrom}" as Long < "${params.sampleSize}" as Long) {
-    exit 1, "Invalid number of sequence reads to sample from (${params.maxNumberToSampleFrom}) - must be at least as large as the sample size (${params.sampleSize})"
+if (params.maxNumberToSampleFrom < params.sampleSize) {
+    exit 1, "Invalid maximum number of sequence reads to sample from - must be at least as large as the sample size"
 }
 
-if (!"${params.chunkSize}".isInteger() || "${params.chunkSize}" as Integer < 100000) {
+if (params.chunkSize < 100000) {
     exit 1, "Invalid chunk size for batch alignment - set to at least 100000 (1000000 recommended)"
 }
 
-trimStart = 1
-
-if ("${params.trimStart}".isInteger()) {
-    trimStart = "${params.trimStart}" as Integer
-} else {
-    exit 1, "Invalid trim start"
-}
-
-if (trimStart <= 0) {
+if (params.trimStart <= 0) {
     exit 1, "Invalid trim start - must be a positive integer value"
 }
 
-trimLength = 36
-
-if ("${params.trimLength}".isInteger()) {
-    trimLength = "${params.trimLength}" as Integer
-} else {
-    exit 1, "Invalid trim length"
-}
-
-if (trimLength < 30) {
+if (params.trimLength < 30) {
     exit 1, "Invalid trim length - trimmed sequences should be sufficiently long to align to reference genomes, i.e. at least 30"
 }
 
 // calculate minimum sequence length used for sampling sequences
-minimumSequenceLength = trimStart + trimLength - 1
+minimumSequenceLength = params.trimStart + params.trimLength - 1
 
 
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // processes
-// ---------
+// -----------------------------------------------------------------------------
 
 process check_inputs {
     input:
@@ -246,9 +229,9 @@ process create_summary {
 }
 
 
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // workflow
-// --------
+// -----------------------------------------------------------------------------
 
 workflow {
 
@@ -273,7 +256,7 @@ workflow {
 
     fastq = check_inputs.out.samples
         .splitCsv(header: true, quote: '"')
-        .map { row -> tuple("${row.id}", "${row.name}", file("${fastqDir}${row.fastq}", checkIfExists: true), "${fastqDir}${row.fastq}") }
+        .map { row -> tuple("${row.id}", "${row.name}", file("${params.fastqDir}${row.fastq}", checkIfExists: true), "${params.fastqDir}${row.fastq}") }
 
     fastq.subscribe { assert !it[2].isEmpty(), "No FASTQ files found for ${it[1]} matching pattern ${it[3]}" }
 
@@ -310,9 +293,9 @@ workflow {
 }
 
 
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // summary of configuration parameters
-// -----------------------------------
+// -----------------------------------------------------------------------------
 
 def printParameterSummary() {
     log.info ""
