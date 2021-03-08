@@ -211,11 +211,11 @@ process create_summary {
     output:
         path "${params.outputPrefix}mga_summary.csv"
         path "${params.outputPrefix}mga_alignment_summary.csv"
+        path "${params.outputPrefix}mga_alignment_summary.png"
+        path "${params.outputPrefix}mga_alignment_summary.pdf"
+        path "${params.outputPrefix}mga_alignment_summary.svg"
         path "${params.outputPrefix}mga_genome_alignments.tsv.gz"
         path "${params.outputPrefix}mga_adapter_alignments.tsv.gz"
-        path "${params.outputPrefix}mga_alignment_bar_chart.png"
-        path "${params.outputPrefix}mga_alignment_bar_chart.pdf"
-        path "${params.outputPrefix}mga_alignment_bar_chart.svg"
 
     script:
         """

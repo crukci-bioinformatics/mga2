@@ -364,9 +364,9 @@ File                          | Description
 ------------------------------|------------------------------
 mga_summary.csv               | Summary of the number of sequences for each sample/dataset, the number sampled and the percentage aligning to the expected species and controls along with error/mismatch rates
 mga_alignment_summary.csv     | Summary of the number of sampled sequences for each sample/dataset aligned to each genome along with error/mismatch rates, also the numbers of sequences assigned to each genome
-mga_alignment_bar_chart.png   | Stacked bar chart summarizing the numbers of sequences assigned to each genome
-mga_alignment_bar_chart.svg   | Stacked bar chart as SVG file
-mga_alignment_bar_chart.pdf   | Stacked bar chart as PDF file
+mga_alignment_summary.png   | Stacked bar chart summarizing the numbers of sequences assigned to each genome
+mga_alignment_summary.svg   | Stacked bar chart as SVG file
+mga_alignment_summary.pdf   | Stacked bar chart as PDF file
 mga_genome_alignments.tsv.gz  | Table containing alignments with the fewest mismatches for each of the sampled sequences
 mga_adapter_alignments.tsv.gz | Table containing adapter matches for each of the sampled sequences
 

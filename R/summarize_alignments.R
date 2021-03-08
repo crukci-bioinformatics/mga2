@@ -49,7 +49,7 @@ output_summary_file <- str_c(output_prefix, "mga_summary.csv")
 output_alignments_file <- str_c(output_prefix, "mga_genome_alignments.tsv.gz")
 output_adapter_alignments_file <- str_c(output_prefix, "mga_adapter_alignments.tsv.gz")
 output_alignment_summary_file <- str_c(output_prefix, "mga_alignment_summary.csv")
-output_plot_file_prefix <- str_c(output_prefix, "mga_alignment_bar_chart")
+output_plot_file_prefix <- str_c(output_prefix, "mga_alignment_summary")
 
 options(scipen = 999)
 
