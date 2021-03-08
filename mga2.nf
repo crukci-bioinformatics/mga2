@@ -32,11 +32,12 @@ if (params.help) {
 
 
 // -----------------------------------------------------------------------------
-// validate input parameters
+// check/derive parameters
 // -----------------------------------------------------------------------------
 
-if (!params.fastqDir.isEmpty() && !params.fastqDir.endsWith("/")) {
-    params.fastqDir = "${params.fastqDir}/"
+fastqDir = params.fastqDir
+if (fastqDir && !fastqDir.endsWith("/")) {
+    fastqDir = "${params.fastqDir}/"
 }
 
 if (params.sampleSize < 1000) {
@@ -256,7 +257,7 @@ workflow {
 
     fastq = check_inputs.out.samples
         .splitCsv(header: true, quote: '"')
-        .map { row -> tuple("${row.id}", "${row.name}", file("${params.fastqDir}${row.fastq}", checkIfExists: true), "${params.fastqDir}${row.fastq}") }
+        .map { row -> tuple("${row.id}", "${row.name}", file("${fastqDir}${row.fastq}", checkIfExists: true), "${fastqDir}${row.fastq}") }
 
     fastq.subscribe { assert !it[2].isEmpty(), "No FASTQ files found for ${it[1]} matching pattern ${it[3]}" }
 
