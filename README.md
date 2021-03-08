@@ -388,7 +388,9 @@ representing the genome alignments and the other adapter matches. The genome bar
 contains separate segments for each genome to which sampled reads have been
 assigned and a segment for unmapped reads. The total size of the bar represents
 the total number of sequences; the sizes of the segments are based on the sample
-of reads and have been scaled accordingly.
+of reads and have been scaled accordingly. An example is shown below.
+
+![Example MGA alignment summary plot](images/mga_alignment_summary.svg)
 
 The bars are coloured green for expected species, gold for controls and red
 for unexpected species, i.e. possible contaminants.
