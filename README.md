@@ -153,7 +153,7 @@ maxNumberToSampleFrom |     10000000000 | Maximum number of sequences to read/sa
 chunkSize             |         1000000 | Number of sequences for each chunk for batch alignment of sampled sequences
 trimStart             |               1 | The position at which the trimmed sequence starts, all bases before this position are trimmed
 trimLength            |              36 | The length of the trimmed sequences
-genomeDetails         | ${projectDir}/resources/genomes.csv | Genome details CSV file containing genome, species and synonym columns
+genomeDetails         | ${projectDir}/resources/genomes.csv | CSV file containing the species name and synonyms for each reference genome (genome, species and synonym colums required)
 bowtieIndexDir        | bowtie_indexes  | Directory containing bowtie indexes for reference genomes
 adaptersFasta         | ${projectDir}/resources/adapters.fa | FASTA file containing adapter sequences
 outputDir             | ${launchDir}    | Directory to which output files are written
