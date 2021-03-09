@@ -307,10 +307,12 @@ an example of which is shown below.
 
     // within mga.config
     myprofile {
-        process.executor = 'slurm'
+        process {
+            executor = 'slurm'
+            queue = 'long'
+        }
         executor {
             queueSize = 25
-            queue = 'large'
             pollInterval = 30.sec
             jobName = { "'$task.name'" }
         }
@@ -323,7 +325,7 @@ This profile can be specified using the `-profile` command line option.
 
 With this profile, Nextflow will submit jobs to cluster nodes using the SLURM
 resource manager. A maximum number of 25 jobs that will be submitted to the
-'large' queue for running in parallel and Nextflow will poll every 30 seconds
+'long' queue for running in parallel and Nextflow will poll every 30 seconds
 to check for completed jobs. Use of Singularity for running jobs using the mga2
 container is enabled so it is not necessary to specify this separately with the
 `-with-singularity` option.
