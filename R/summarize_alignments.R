@@ -476,7 +476,7 @@ plot <- ggplot(plot_data, aes(x = type, y = scaled_count, group = group, fill = 
     legend.title = element_blank(),
     legend.key.height = unit(0.8, "line"),
     legend.key.width = unit(1.5, "line"),
-    legend.text = element_text(margin = margin(r = 1, unit = 'line')),
+    legend.text = element_text(margin = margin(r = 1, unit = "line")),
     panel.border = element_blank(),
     panel.grid = element_blank(),
     axis.line.x = element_line(),

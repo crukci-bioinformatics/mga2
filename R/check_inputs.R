@@ -1,7 +1,7 @@
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 5)
 {
-  stop('Usage: Rscript check_inputs.R samples_file genome_details_file bowtie_index_list_file output_samples_file output_genomes_file')
+  stop("Usage: Rscript check_inputs.R samples_file genome_details_file bowtie_index_list_file output_samples_file output_genomes_file")
 }
 
 samples_file <- args[1]
