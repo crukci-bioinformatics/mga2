@@ -1,19 +1,18 @@
 # Multi-genome alignment (MGA) contaminant screen for DNA/RNA sequencing data
 
 MGA is a quality control tool for high-throughput sequencing data. It screens
-for contaminants by aligning sequence reads in FASTQ format against a series of
+for contaminants by aligning sequence reads in FASTQ format to a series of
 reference genomes using [bowtie](http://bowtie-bio.sourceforge.net/index.shtml)
-and against a set of adapter sequences using
+and to a set of adapter sequences using
 [exonerate](https://www.ebi.ac.uk/about/vertebrate-genomics/software/exonerate).
 
 MGA samples a subset of the reads, by default 100000, prior to alignment against
 reference genome sequences and adapters, providing a fast screen for unexpected
-sequence content with minimal computational effort. Sequence reads are trimmed
-to 36 bases by default, prior to alignment against the reference genomes using
-bowtie with the aim of minimizing the run time and ensuring consistency of the
-resulting mapping and error rates across sequencing runs with differing read
-lengths. Full length reads are used for matching adapter sequences using
-exonerate.
+sequence content by limiting the computational effort. Sequence reads are trimmed
+to 36 bases by default, prior to alignment to the reference genomes, with the
+aim of minimizing the run time and ensuring consistency of the resulting mapping
+and error rates across sequencing runs with differing read lengths. Full length
+reads are used for matching adapter sequences.
 
 mga2 is a rewrite of the original [MGA](https://github.com/crukci-bioinformatics/MGA)
 in which the workflow has been ported to [Nextflow](https://www.nextflow.io/index.html),
@@ -388,7 +387,11 @@ output file names, e.g.
 The summary bar chart displays two separate bars for each sample or dataset, one
 representing the genome alignments and the other adapter matches. The genome bar
 contains separate segments for each genome to which sampled reads have been
-assigned and a segment for unmapped reads. The total size of the bar represents
+assigned and a segment for unmapped reads. The sizes of the segments are based 
+on the sampled reads and have been scaled for the total number of sequences.
+
+
+The total size of the bar represents
 the total number of sequences; the sizes of the segments are based on the sample
 of reads and have been scaled accordingly. An example is shown below.
 
@@ -425,7 +428,7 @@ reference genomes and among the reads containing adapter sequence.
 
 Sequence reads will often align to more than one reference genome. MGA assigns
 reads to the genome with the fewest mismatches. If a read aligns with the same
-samllest number of mismatches to multiple genomes, then the following method is
+smallest number of mismatches to multiple genomes, then the following method is
 used to assign reads to one of the best-matching genomes.
 
 1. Select alignments for each read with the fewest mismatches for that read; discard the sub-optimal alignments
@@ -436,7 +439,7 @@ used to assign reads to one of the best-matching genomes.
 
 4. If the read aligns to one or more of the expected genomes, i.e. for a species or control specified in the sample sheet, then assign it to the expected genome with the highest rank, regardless of there being a higher-ranking genome for an unexpected species - priority is given to expected over unexpected species
 
-4. If the read doesn't align to one of the expected genomes, assign it to the genome with the highest rank
+5. If the read doesn't align to one of the expected genomes, assign it to the genome with the highest rank
 
 ### Trimming sequence reads
 
