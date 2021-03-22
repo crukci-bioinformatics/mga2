@@ -147,7 +147,7 @@ process bowtie {
         path "${prefix}.${genome}.tsv"
 
     script:
-        prefix=fastq.baseName
+        prefix = fastq.baseName
         """
         set -eo pipefail
         echo "genome	read	strand	chromosome	position	sequence	quality	num	mismatches" > ${prefix}.${genome}.tsv
@@ -177,7 +177,7 @@ process exonerate {
         path "${prefix}.adapter_alignments.tsv"
 
     script:
-        prefix=fasta.baseName
+        prefix = fasta.baseName
         """
         echo "read	start	end	strand	adapter	adapter start	adapter end	adapter strand	percent identity	score" > ${prefix}.adapter_alignments.tsv
         if [[ `head ${fasta} | wc -l` -gt 0 ]]
