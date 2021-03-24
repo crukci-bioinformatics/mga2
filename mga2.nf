@@ -70,7 +70,6 @@ minimumSequenceLength = params.trimStart + params.trimLength - 1
 
 process check_inputs {
     input:
-        path install_dir
         path samples
         path genome_details
         path bowtie_index_list
@@ -81,7 +80,7 @@ process check_inputs {
 
     script:
         """
-        Rscript ${install_dir}/R/check_inputs.R ${samples} ${genome_details} ${bowtie_index_list} samples.checked.csv genomes.checked.csv
+        check_inputs.R ${samples} ${genome_details} ${bowtie_index_list} samples.checked.csv genomes.checked.csv
         """
 }
 
@@ -201,7 +200,6 @@ process create_summary {
     publishDir "${params.outputDir}", mode: 'copy'
 
     input:
-        path install_dir
         path samples
         path genomes
         path counts
@@ -219,7 +217,7 @@ process create_summary {
 
     script:
         """
-        Rscript ${install_dir}/R/summarize_alignments.R \
+        summarize_alignments.R \
             --samples=${samples} \
             --genomes=${genomes} \
             --counts=${counts} \
@@ -236,7 +234,6 @@ process create_summary {
 
 workflow {
 
-    install_dir = channel.fromPath(projectDir, checkIfExists: true)
     sample_sheet = channel.fromPath(params.sampleSheet, checkIfExists: true)
     genome_details = channel.fromPath(params.genomeDetails, checkIfExists: true)
     bowtie_index_dir = channel.fromPath(params.bowtieIndexDir, checkIfExists: true)
@@ -249,7 +246,6 @@ workflow {
     bowtie_index_list = genomes.collectFile(name: "bowtie_index_list.txt", newLine: true)
 
     check_inputs(
-        install_dir,
         sample_sheet,
         genome_details,
         bowtie_index_list
@@ -284,7 +280,6 @@ workflow {
     adapter_alignments = exonerate.out.collectFile(name: "adapter_alignments.collected.tsv", keepHeader: true)
 
     create_summary(
-        install_dir,
         check_inputs.out.samples,
         check_inputs.out.genomes,
         counts,
