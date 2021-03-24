@@ -13,27 +13,27 @@ RUN apt update && apt install -y \
     libssl-dev \
     libfontconfig1-dev
 
-RUN curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /opt/miniconda3.sh && \
-    sh /opt/miniconda3.sh -b -p /opt/conda && \
-    rm /opt/miniconda3.sh
-
-ENV PATH /opt/conda/bin:${PATH}
-
-COPY conda.yml .
-
-RUN conda env update -n root -f conda.yml && conda clean -a
-
 ENV R_VERSION=4.0.4
 
 RUN curl -O https://cdn.rstudio.com/r/debian-10/pkgs/r-${R_VERSION}_1_amd64.deb && \
     gdebi -n r-${R_VERSION}_1_amd64.deb && \
     rm r-${R_VERSION}_1_amd64.deb
 
-ENV PATH /opt/R/${R_VERSION}/bin:${PATH}
+ENV PATH ${PATH}:/opt/R/${R_VERSION}/bin
 
 RUN R -e 'install.packages(c("optparse", "svglite", "tidyverse"), repos = "https://cloud.r-project.org")'
 
-ADD "https://api.github.com/repos/crukci-bioinformatics/mga2/commits?per_page=1" /opt/mga2_latest_commit
-RUN git clone https://github.com/crukci-bioinformatics/mga2 /opt/mga2 && \
-    cargo install --path /opt/mga2
+RUN curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /opt/miniconda3.sh && \
+    sh /opt/miniconda3.sh -b -p /opt/conda && \
+    rm /opt/miniconda3.sh
+
+ENV PATH ${PATH}:/opt/conda/bin
+
+COPY conda.yml .
+
+RUN conda env update -n root -f conda.yml && conda clean -a
+
+ADD "https://api.github.com/repos/crukci-bioinformatics/mga2/commits?per_page=1" /opt/mga2/.latest_commit
+RUN git clone https://github.com/crukci-bioinformatics/mga2 /opt/mga2/build && \
+    cargo install --path /opt/mga2/build
 
