@@ -1,7 +1,14 @@
+#!/usr/bin/env Rscript
+
+# Checks the input files are valid with the expected columns and that there
+# aren't missing or duplicated values where there shouldn't be; writes
+# checked/validated versions for subsequent use in the pipeline
+
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 5)
 {
-  stop("Usage: Rscript check_inputs.R samples_file genome_details_file bowtie_index_list_file output_samples_file output_genomes_file")
+  message("Usage: check_inputs.R samples_file genome_details_file bowtie_index_list_file output_samples_file output_genomes_file")
+  quit(status = 1)
 }
 
 samples_file <- args[1]
