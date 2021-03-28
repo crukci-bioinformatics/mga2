@@ -77,12 +77,19 @@ process check_inputs {
         path bowtie_index_list
 
     output:
-        path "samples.checked.csv", emit: samples
-        path "genomes.checked.csv", emit: genomes
+        path checked_samples, emit: samples
+        path checked_genomes, emit: genomes
 
     script:
+        checked_samples = "samples.checked.csv"
+        checked_genomes = "genomes.checked.csv"
         """
-        check_inputs.R ${samples} ${genome_details} ${bowtie_index_list} samples.checked.csv genomes.checked.csv
+        check_inputs.R \
+            --samples=${samples} \
+            --genomes=${genome_details} \
+            --bowtie-indexes=${bowtie_index_list} \
+            --output-samples=${checked_samples} \
+            --output-genomes=${checked_genomes}
         """
 }
 
@@ -96,10 +103,12 @@ process sample_fastq {
         tuple val(id), val(name), path(fastq), val(fastq_pattern)
 
     output:
-        path "${id}.sample.fq", emit: fastq
-        path "${id}.summary.csv", emit: summary
+        path sampled_fastq, emit: fastq
+        path summary, emit: summary
 
     script:
+        sampled_fastq = "${id}.sample.fq"
+        summary = "${id}.summary.csv"
         """
         RUST_LOG=info \
         sample-fastq \
@@ -108,8 +117,8 @@ process sample_fastq {
             --max-number-to-sample-from=${params.maxNumberToSampleFrom} \
             --min-sequence-length=${minimumSequenceLength} \
             --prepend-id \
-            --output-file="${id}.sample.fq" \
-            --summary-file="${id}.summary.csv" \
+            --output-file=${sampled_fastq} \
+            --summary-file=${summary} \
             --check-unique-record-ids \
             ${fastq}
         """
@@ -153,12 +162,13 @@ process bowtie {
         each genome
 
     output:
-        path "${prefix}.${genome}.tsv"
+        path alignments
 
     script:
         prefix = fastq.baseName
+        alignments = "${prefix}.${genome}.tsv"
         """
-        set -eo pipefail
+        set -o pipefail
         echo "genome	read	strand	chromosome	position	sequence	quality	num	mismatches" > ${prefix}.${genome}.tsv
         if [[ `head ${fastq} | wc -l` -gt 0 ]]
         then
@@ -169,7 +179,7 @@ process bowtie {
                 -x ${bowtie_index_dir}/${genome} \
                 ${fastq} \
             | sed "s/^/${genome}\t/" \
-            >> "${prefix}.${genome}.tsv"
+            >> ${alignments}
         fi
         """
 }
@@ -187,12 +197,13 @@ process exonerate {
         path adapters_fasta
 
     output:
-        path "${prefix}.adapter_alignments.tsv"
+        path alignments
 
     script:
         prefix = fasta.baseName
+        alignments = "${prefix}.adapter_alignments.tsv"
         """
-        echo "read	start	end	strand	adapter	adapter start	adapter end	adapter strand	percent identity	score" > ${prefix}.adapter_alignments.tsv
+        echo "read	start	end	strand	adapter	adapter start	adapter end	adapter strand	percent identity	score" > ${alignments}
         if [[ `head ${fasta} | wc -l` -gt 0 ]]
         then
             exonerate \
@@ -204,7 +215,7 @@ process exonerate {
                 --ryo "%qi\t%qab\t%qae\t%qS\t%ti\t%tab\t%tae\t%tS\t%pi\t%s\n" \
                 ${fasta} \
                 ${adapters_fasta} \
-            >> "${prefix}.adapter_alignments.tsv"
+            >> ${alignments}
         fi
         """
 }
