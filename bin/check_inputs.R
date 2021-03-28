@@ -4,18 +4,44 @@
 # aren't missing or duplicated values where there shouldn't be; writes
 # checked/validated versions for subsequent use in the pipeline
 
-args <- commandArgs(trailingOnly = TRUE)
-if (length(args) < 5)
-{
-  message("Usage: check_inputs.R samples_file genome_details_file bowtie_index_list_file output_samples_file output_genomes_file")
-  quit(status = 1)
-}
+suppressPackageStartupMessages(library(optparse))
 
-samples_file <- args[1]
-genome_details_file <- args[2]
-bowtie_index_list_file <- args[3]
-output_samples_file <- args[4]
-output_genomes_file <- args[5]
+option_list <- list(
+
+  make_option(c("--samples"), dest = "samples_file",
+              help = "Sample sheet file containing details of species and controls for each sample/dataset"),
+
+  make_option(c("--genomes"), dest = "genome_details_file",
+              help = "Genomes file containing list of indexed reference genome sequences and associated species"),
+
+  make_option(c("--bowtie-indexes"), dest = "bowtie_index_list_file",
+              help = "File containing list of paths for bowtie genome sequence indexes"),
+
+  make_option(c("--output-samples"), dest = "output_samples_file",
+              help = "Output sample sheet file in the format required for subsequent pipeline processes"),
+
+  make_option(c("--output-genomes"), dest = "output_genomes_file",
+              help = "Output genome details file in the format required for subsequent pipeline processes")
+)
+
+option_parser <- OptionParser(usage = "usage: %prog [options]", option_list = option_list, add_help_option = TRUE)
+
+args <- commandArgs(trailingOnly = TRUE)
+if (length(args) == 0) args <- "--help"
+
+opt <- parse_args(option_parser, args)
+
+samples_file <- opt$samples_file
+genome_details_file <- opt$genome_details_file
+bowtie_index_list_file <- opt$bowtie_index_list_file
+output_samples_file <- opt$output_samples_file
+output_genomes_file <- opt$output_genomes_file
+
+if (is.null(samples_file)) stop("Sample sheet file must be specified")
+if (is.null(genome_details_file)) stop("Genome details file must be specified")
+if (is.null(bowtie_index_list_file)) stop("Bowtie index path list file must be specified")
+if (is.null(output_samples_file)) stop("Output sample sheet file must be specified")
+if (is.null(output_genomes_file)) stop("Output genome details file must be specified")
 
 suppressPackageStartupMessages(library(tidyverse))
 
