@@ -224,6 +224,10 @@ process exonerate {
 process create_summary {
     publishDir "${params.outputDir}", mode: 'copy'
 
+    memory { 2.GB * task.attempt }
+    time { 1.hour * task.attempt }
+    maxRetries 2
+
     input:
         path samples
         path genomes
