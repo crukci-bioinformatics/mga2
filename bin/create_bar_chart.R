@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-## summarize alignments and creates stacked bar chart plot
+# create stacked bar chart plot
 
 suppressPackageStartupMessages(library(optparse))
 
