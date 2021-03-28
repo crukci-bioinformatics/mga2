@@ -69,6 +69,8 @@ minimumSequenceLength = params.trimStart + params.trimLength - 1
 // -----------------------------------------------------------------------------
 
 process check_inputs {
+    executor "local"
+
     input:
         path samples
         path genome_details
@@ -87,6 +89,8 @@ process check_inputs {
 
 process sample_fastq {
     tag "${id} ${name}"
+
+    time 12.hour
 
     input:
         tuple val(id), val(name), path(fastq), val(fastq_pattern)
@@ -113,6 +117,8 @@ process sample_fastq {
 
 
 process trim_and_split {
+    executor "local"
+
     input:
         path fastq
 
@@ -136,6 +142,10 @@ process trim_and_split {
 
 process bowtie {
     tag "${prefix}.${genome}"
+
+    memory { 4.GB * 2 ** (task.attempt - 1) }
+    time { 2.hour * 2 ** (task.attempt - 1) }
+    maxRetries 2
 
     input:
         each path(fastq)
@@ -167,6 +177,10 @@ process bowtie {
 
 process exonerate {
     tag "${prefix}.adapters"
+
+    memory { 2.GB * task.attempt }
+    time { 1.hour * task.attempt }
+    maxRetries 2
 
     input:
         each path(fasta)
