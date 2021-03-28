@@ -499,3 +499,4 @@ height <- 0.7 * (1.5 + nrow(sample_names))
 ggsave(str_c(output_plot_file_prefix, ".png"), plot, width = width, height = height)
 ggsave(str_c(output_plot_file_prefix, ".pdf"), plot, width = width, height = height)
 ggsave(str_c(output_plot_file_prefix, ".svg"), plot, width = width, height = height)
+

@@ -217,4 +217,3 @@ genome_details %>%
   select(genome, species) %>%
   write_csv(output_genomes_file, na = "")
 
-
