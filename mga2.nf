@@ -232,8 +232,8 @@ process create_summary {
         path adapter_alignments
 
     output:
-        path "${params.outputPrefix}mga_summary.csv"
-        path "${params.outputPrefix}mga_alignment_summary.csv"
+        path summary, emit: summary
+        path alignment_summary, emit: alignment_summary
         path "${params.outputPrefix}mga_alignment_summary.png"
         path "${params.outputPrefix}mga_alignment_summary.pdf"
         path "${params.outputPrefix}mga_alignment_summary.svg"
@@ -241,6 +241,8 @@ process create_summary {
         path "${params.outputPrefix}mga_adapter_alignments.tsv.gz"
 
     script:
+        summary = "${params.outputPrefix}mga_summary.csv"
+        alignment_summary = "${params.outputPrefix}mga_alignment_summary.csv"
         """
         summarize_alignments.R \
             --samples=${samples} \
@@ -248,6 +250,11 @@ process create_summary {
             --counts=${counts} \
             --alignments=${alignments} \
             --adapter-alignments=${adapter_alignments} \
+            --output-prefix="${params.outputPrefix}"
+
+        create_bar_chart.R \
+            --summary=${summary} \
+            --alignment-summary=${alignment_summary} \
             --output-prefix="${params.outputPrefix}"
         """
 }
