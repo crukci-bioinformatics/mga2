@@ -7,7 +7,7 @@ suppressPackageStartupMessages(library(optparse))
 option_list <- list(
   make_option(c("--summary"), dest = "summary_file",
               help = "CSV file containing alignment/assignment summary for each data set"),
-  
+
   make_option(c("--alignment-summary"), dest = "alignment_summary_file",
               help = "CSV file containing alignment/assignment summary for each genome and data set"),
 
@@ -29,15 +29,11 @@ output_prefix <- opt$output_prefix
 if (is.null(summary_file)) stop("Summary file must be specified")
 if (is.null(alignment_summary_file)) stop("Alignment summary file must be specified")
 
+if (is.null(output_prefix)) output_prefix <- ""
+
 suppressPackageStartupMessages(library(tidyverse))
 
-output_plot_file_prefix <- "mga_alignment_summary"
-if (!is.null(output_prefix)) {
-  output_prefix <- str_trim(output_prefix)
-  if (str_length(output_prefix) > 1) {
-    output_plot_file_prefix <- str_c(output_prefix, ".", output_plot_file_prefix)
-  }
-}
+output_plot_file_prefix <- str_c(output_prefix, "mga_alignment_summary")
 
 # genome alignment summaries
 alignment_summary <- read_csv(alignment_summary_file)
