@@ -1,5 +1,7 @@
 #!/usr/bin/env Rscript
 
+options(bitmapType='cairo')
+
 # create stacked bar chart plot
 
 suppressPackageStartupMessages(library(optparse))
