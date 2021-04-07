@@ -44,6 +44,26 @@ impl FastqRecord {
         self.seq.is_empty()
     }
 
+    pub fn check(&self) -> Result<()> {
+        if self.id.is_empty() {
+            bail!("Missing identifier for FASTQ record");
+        }
+
+        if !self.seq.is_ascii() {
+            bail!("Sequence string contains non-ASCII character(s)");
+        }
+
+        if !self.qual.is_ascii() {
+            bail!("Quality score string contains non-ASCII character(s)");
+        }
+
+        if self.seq.len() != self.qual.len() {
+            bail!("Sequence and quality strings have different lengths");
+        }
+
+        Ok(())
+    }
+
     pub fn trim(&mut self, start: usize, end: Option<usize>) -> Result<()> {
         let length = self.seq.len();
         if self.qual.len() != length {
@@ -169,9 +189,7 @@ impl<R: BufRead> FastqReader<R> {
             }
         }
 
-        if self.read_next_line(&mut record.id) == 0 {
-            return Ok(false);
-        }
+        self.read_next_line(&mut record.id);
 
         match record.id.find(' ') {
             Some(length) => {
@@ -372,4 +390,255 @@ fn write_fasta(writer: &mut dyn Write, record: &FastqRecord) -> Result<()> {
         position += FASTA_WIDTH;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const RECORD_ID: &str = "MDE123";
+    const DESCRIPTION: &str = "a sample read for testing";
+    const SEQUENCE: &str = "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA";
+    const QUALITIES: &str = "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ";
+
+    const EMPTY_RECORD: &[u8] = b"";
+
+    const FASTQ_RECORD: &[u8] = b"@MDE123 a sample read for testing
+TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
++
+AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ
+";
+
+    const INCOMPLETE_RECORD: &[u8] = b"@MDE123 a sample read for testing
+TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
++
+";
+
+    fn create_record() -> FastqRecord {
+        FastqRecord {
+            id: RECORD_ID.to_string(),
+            desc: Some(DESCRIPTION.to_string()),
+            seq: SEQUENCE.to_string(),
+            qual: QUALITIES.to_string(),
+        }
+    }
+
+    #[test]
+    fn valid_record() {
+        let mut record = create_record();
+        assert!(record.check().is_ok(), "Invalid record");
+        record.desc = None;
+        assert!(record.check().is_ok(), "Invalid record");
+    }
+
+    #[test]
+    fn missing_id() {
+        let mut record = FastqRecord::new();
+        record.desc = Some(DESCRIPTION.to_string());
+        record.seq = SEQUENCE.to_string();
+        record.qual = QUALITIES.to_string();
+        let result = record.check();
+        assert!(result.is_err(), "Expecting error for missing identifier");
+        let error = result.unwrap_err();
+        assert_eq!(error.to_string(), "Missing identifier for FASTQ record");
+    }
+
+    #[test]
+    fn invalid_sequence() {
+        let mut record = FastqRecord::new();
+        record.id = RECORD_ID.to_string();
+        record.seq = "TGTGACCCAAGAAGTTGTTAAAATéTCCGGAGGTAGCCATTATATACCAA".to_string();
+        record.qual = QUALITIES.to_string();
+        let result = record.check();
+        assert!(
+            result.is_err(),
+            "Expecting error for non-ASCII character in sequence"
+        );
+        let error = result.unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "Sequence string contains non-ASCII character(s)"
+        );
+    }
+
+    #[test]
+    fn invalid_quality_string() {
+        let mut record = FastqRecord::new();
+        record.id = RECORD_ID.to_string();
+        record.seq = SEQUENCE.to_string();
+        record.qual = "AAFFFJJJJJJJJJJJJJJJIJJéJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string();
+        let result = record.check();
+        assert!(
+            result.is_err(),
+            "Expecting error for non-ASCII character in quality"
+        );
+        let error = result.unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "Quality score string contains non-ASCII character(s)"
+        );
+    }
+
+    #[test]
+    fn differing_sequence_and_quality_strings() {
+        let mut record = FastqRecord::new();
+        record.id = RECORD_ID.to_string();
+        record.seq = SEQUENCE.to_string();
+        record.qual = "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJ".to_string();
+        let result = record.check();
+        assert!(
+            result.is_err(),
+            "Expecting error for differing lengths of sequence and quality strings"
+        );
+        let error = result.unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "Sequence and quality strings have different lengths"
+        );
+    }
+
+    #[test]
+    fn read_empty_record() {
+        let mut reader = FastqReader::new("test".to_string(), EMPTY_RECORD);
+        let result = reader.read_next();
+        assert!(result.is_ok(), "Error reading empty FASTQ record");
+        let record = result.unwrap();
+        assert!(record.is_none(), "Record found when none expected");
+    }
+
+    #[test]
+    fn read_single_record() {
+        let mut reader = FastqReader::new("test".to_string(), FASTQ_RECORD);
+        let result = reader.read_next();
+        assert!(result.is_ok(), "Error reading FASTQ record");
+        let record = result.unwrap();
+        assert!(record.is_some(), "No record read");
+        let record = record.unwrap();
+        assert_eq!(record.id, RECORD_ID.to_string());
+        assert_eq!(record.desc, Some(DESCRIPTION.to_string()));
+        assert_eq!(record.seq, SEQUENCE.to_string());
+        assert_eq!(record.qual, QUALITIES.to_string());
+        assert!(record.check().is_ok(), "Invalid record");
+        let result = reader.read_next();
+        assert!(result.is_ok(), "Error reading FASTQ record");
+        let record = result.unwrap();
+        assert!(record.is_none(), "Record found when none expected");
+    }
+
+    #[test]
+    fn read_into_record() {
+        let mut reader = FastqReader::new("test".to_string(), FASTQ_RECORD);
+        let mut record = FastqRecord::new();
+        let result = reader.read_next_into(&mut record);
+        assert!(result.is_ok(), "Error reading FASTQ record");
+        assert_eq!(record.id, RECORD_ID.to_string());
+        assert_eq!(record.desc, Some(DESCRIPTION.to_string()));
+        assert_eq!(record.seq, SEQUENCE.to_string());
+        assert_eq!(record.qual, QUALITIES.to_string());
+        assert!(record.check().is_ok(), "Invalid record");
+        let result = reader.read_next_into(&mut record);
+        assert!(result.is_ok(), "Error reading FASTQ record");
+        let record_found = result.unwrap();
+        assert!(!record_found, "Record found when none expected");
+    }
+
+    #[test]
+    fn read_incomplete_record() {
+        let mut reader = FastqReader::new("test".to_string(), INCOMPLETE_RECORD);
+        let mut record = FastqRecord::new();
+        let result = reader.read_next_into(&mut record);
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert!(error.to_string().starts_with("incomplete record at line"));
+    }
+
+    const INCOMPLETE_SECOND_RECORD: &[u8] = b"@MDE123 a sample read for testing
+TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
++
+AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ
+@
+";
+
+    #[test]
+    fn incomplete_second_record() {
+        let mut reader = FastqReader::new("test".to_string(), INCOMPLETE_SECOND_RECORD);
+        let mut record = FastqRecord::new();
+        let result = reader.read_next_into(&mut record);
+        assert!(result.is_ok(), "Error reading valid first FASTQ record");
+        assert!(record.check().is_ok(), "Expecting valid first record");
+        let result = reader.read_next_into(&mut record);
+        assert!(
+            result.is_err(),
+            "Expecting error for incomplete second record"
+        );
+        let error = result.unwrap_err();
+        assert!(error
+            .to_string()
+            .starts_with("error extracting sequence id for record at line"));
+    }
+
+    #[test]
+    fn write_fastq_record() {
+        let record = create_record();
+        let mut writer = FastqWriter::new(BufWriter::new(Vec::new()));
+        writer
+            .write_fastq(&record)
+            .expect("Error writing FASTQ record");
+        writer.flush().expect("Error flushing FASTQ writer");
+        assert_eq!(writer.writer.get_ref(), &FASTQ_RECORD);
+    }
+
+    const FASTA_RECORD: &[u8] = b">MDE123 a sample read for testing
+TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
+";
+
+    #[test]
+    fn write_fasta_record() {
+        let record = create_record();
+        let mut writer = FastqWriter::new(BufWriter::new(Vec::new()));
+        writer
+            .write_fasta(&record)
+            .expect("Error writing FASTA record");
+        writer.flush().expect("Error flushing FASTQ writer");
+        assert_eq!(writer.writer.get_ref(), &FASTA_RECORD);
+    }
+
+    #[test]
+    fn trim_start_and_end() {
+        let mut record = create_record();
+        let result = record.trim(11, Some(35));
+        assert!(result.is_ok(), "Unexpected error during trimming");
+        assert!(record.check().is_ok(), "Invalid record after trimming");
+        assert_eq!(record.seq, "GAAGTTGTTAAAATTTCCGGAGGTA".to_string());
+    }
+
+    #[test]
+    fn trim_start() {
+        let mut record = create_record();
+        let result = record.trim(11, None);
+        assert!(result.is_ok(), "Unexpected error during trimming");
+        assert!(record.check().is_ok(), "Invalid record after trimming");
+        assert_eq!(record.seq, "GAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string());
+        assert_eq!(record.qual, "JJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string());
+    }
+
+    #[test]
+    fn trim_beyond_end() {
+        let mut record = create_record();
+        let result = record.trim(11, Some(1000));
+        assert!(result.is_ok(), "Unexpected error during trimming");
+        assert!(record.check().is_ok(), "Invalid record after trimming");
+        assert_eq!(record.seq, "GAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string());
+        assert_eq!(record.qual, "JJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string());
+    }
+    
+    #[test]
+    fn trim_to_length() {
+        let mut record = create_record();
+        let result = record.trim_to_length(36);
+        assert!(result.is_ok(), "Unexpected error during trimming");
+        assert!(record.check().is_ok(), "Invalid record after trimming");
+        assert_eq!(record.seq, "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAG".to_string());
+        assert_eq!(record.qual, "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJ".to_string());
+    }
 }
