@@ -4,7 +4,7 @@ use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::fs::File;
 use std::io::{stdout, BufRead, BufReader, BufWriter, ErrorKind, Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Clone, Default)]
 pub struct FastqRecord {
@@ -292,7 +292,7 @@ impl<W: Write> FastqWriter<W> {
     }
 }
 
-pub fn create_fastq_reader(fastq_file: &PathBuf) -> Result<FastqReader<BufReader<Box<dyn Read>>>> {
+pub fn create_fastq_reader(fastq_file: &Path) -> Result<FastqReader<BufReader<Box<dyn Read>>>> {
     let fastq_file_name = match fastq_file.to_str() {
         Some(name) => String::from(name),
         None => {

@@ -4,7 +4,7 @@ use mga2::fastq::{create_fastq_reader, create_fastq_writer, FastqRecord};
 use rand::{thread_rng, Rng};
 use serde::Serialize;
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
 /// Sample a specified number of records from a FASTQ file.
@@ -199,7 +199,7 @@ fn write_summary(
     id: &Option<String>,
     read: u64,
     sampled: u32,
-    summary_file: &PathBuf,
+    summary_file: &Path,
 ) -> Result<()> {
     let summary_filename = summary_file.to_str().unwrap();
     info!("Writing summary to {}", summary_filename);
