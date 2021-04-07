@@ -70,6 +70,7 @@ minimumSequenceLength = params.trimStart + params.trimLength - 1
 
 process check_inputs {
     executor "local"
+    stageInMode 'copy'
 
     input:
         path samples
