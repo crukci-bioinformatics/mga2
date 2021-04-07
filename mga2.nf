@@ -5,25 +5,12 @@ nextflow.enable.dsl = 2
 
 
 // -----------------------------------------------------------------------------
-// default parameter settings
+// default parameter settings are in 'nextflow.config'
 // -----------------------------------------------------------------------------
 
-params.help                  = false
-params.sampleSheet           = "samplesheet.csv"
-params.fastqDir              = ""
-params.sampleSize            = 100000
-params.maxNumberToSampleFrom = 10000000000
-params.chunkSize             = 1000000
-params.trimStart             = 1
-params.trimLength            = 36
-params.genomeDetails         = "${projectDir}/resources/genomes.csv"
-params.bowtieIndexDir        = "bowtie_indexes"
-params.adaptersFasta         = "${projectDir}/resources/adapters.fa"
-params.outputDir             = "${launchDir}"
-params.outputPrefix          = ""
-
-
-printParameterSummary()
+if (params.showSettings) {
+    printParameterSummary()
+}
 
 if (params.help) {
     helpMessage()
@@ -70,6 +57,7 @@ minimumSequenceLength = params.trimStart + params.trimLength - 1
 
 process check_inputs {
     executor "local"
+    stageInMode 'copy'
 
     input:
         path samples
