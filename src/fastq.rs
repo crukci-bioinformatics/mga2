@@ -1,3 +1,54 @@
+//! Functions for reading and writing FASTQ records.
+//! 
+//! Example of reading a FASTQ file, iterating over each record and counting
+//! the cumulative number of bases. This creates a new
+//! [`FastqRecord`](struct.FastqRecord.html) struct for each record.
+//! 
+//! ```
+//! # use anyhow::Result;
+//! use mga2::fastq::FastqReader;
+//! use std::io::{self, BufReader};
+//!
+//! # fn main() -> Result<()> {
+//! let mut reader = FastqReader::new(BufReader::new(io::stdin()));
+//!
+//! let mut number_of_records = 0;
+//! let mut number_of_bases = 0;
+//!
+//! while let Some(record) = reader.read_next()? {
+//!     number_of_records += 1;
+//!     number_of_bases += record.seq.len();
+//! }
+//!
+//! println!("Number of reads: {}", number_of_records);
+//! println!("Number of bases: {}", number_of_bases);
+//! # Ok(())
+//! # }
+//! ```
+//! 
+//! A single FastqRecord struct can be reused for each iteration to avoid the
+//! cost of creating new instances.
+//! 
+//! ```
+//! # use anyhow::Result;
+//! use mga2::fastq::{FastqReader, FastqRecord};
+//! use std::io::{self, BufReader};
+//! 
+//! # fn main() -> Result<()> {
+//! let mut reader = FastqReader::new(BufReader::new(io::stdin()));
+//! let mut record = FastqRecord::new();
+//! 
+//! let mut number_of_records = 0;
+//! let mut number_of_bases = 0;
+//!
+//! while reader.read_next_into(&mut record)? {
+//!     number_of_records += 1;
+//!     number_of_bases += record.seq.len();
+//! }
+//! # Ok(())
+//! # }
+//! ```
+
 use anyhow::{bail, Context, Result};
 use flate2::bufread::MultiGzDecoder;
 use flate2::write::GzEncoder;
@@ -112,8 +163,8 @@ impl FastqRecord {
 }
 
 pub struct FastqReader<R: BufRead> {
-    name: String,
     reader: R,
+    name: String,
     id_capacity: usize,
     sequence_capacity: usize,
     test_separator_char: [u8; 1],
@@ -121,19 +172,23 @@ pub struct FastqReader<R: BufRead> {
 }
 
 impl<R: BufRead> FastqReader<R> {
-    pub fn new(name: String, reader: R) -> Self {
-        FastqReader::with_capacity(name, reader, 50, 160)
+    pub fn new(reader: R) -> Self {
+        FastqReader::with_capacity(reader, "unnamed", 50, 160)
+    }
+
+    pub fn with_name(reader: R, name: &str) -> Self {
+        FastqReader::with_capacity(reader, name, 50, 160)
     }
 
     pub fn with_capacity(
-        name: String,
         reader: R,
+        name: &str,
         id_capacity: usize,
         sequence_capacity: usize,
     ) -> Self {
         FastqReader {
-            name,
             reader,
+            name: name.to_string(),
             id_capacity,
             sequence_capacity,
             test_separator_char: [0],
@@ -331,7 +386,7 @@ pub fn create_fastq_reader(fastq_file: &Path) -> Result<FastqReader<BufReader<Bo
     };
 
     let buffered_reader = BufReader::with_capacity(64 * 1024, reader);
-    let fastq_reader = FastqReader::new(fastq_file_name, buffered_reader);
+    let fastq_reader = FastqReader::with_name(buffered_reader, fastq_file_name.as_str());
 
     Ok(fastq_reader)
 }
@@ -499,7 +554,7 @@ TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
 
     #[test]
     fn read_empty_record() {
-        let mut reader = FastqReader::new("test".to_string(), EMPTY_RECORD);
+        let mut reader = FastqReader::new(EMPTY_RECORD);
         let result = reader.read_next();
         assert!(result.is_ok(), "Error reading empty FASTQ record");
         let record = result.unwrap();
@@ -508,7 +563,7 @@ TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
 
     #[test]
     fn read_single_record() {
-        let mut reader = FastqReader::new("test".to_string(), FASTQ_RECORD);
+        let mut reader = FastqReader::new(FASTQ_RECORD);
         let result = reader.read_next();
         assert!(result.is_ok(), "Error reading FASTQ record");
         let record = result.unwrap();
@@ -527,7 +582,7 @@ TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
 
     #[test]
     fn read_into_record() {
-        let mut reader = FastqReader::new("test".to_string(), FASTQ_RECORD);
+        let mut reader = FastqReader::new(FASTQ_RECORD);
         let mut record = FastqRecord::new();
         let result = reader.read_next_into(&mut record);
         assert!(result.is_ok(), "Error reading FASTQ record");
@@ -544,7 +599,7 @@ TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
 
     #[test]
     fn read_incomplete_record() {
-        let mut reader = FastqReader::new("test".to_string(), INCOMPLETE_RECORD);
+        let mut reader = FastqReader::new(INCOMPLETE_RECORD);
         let mut record = FastqRecord::new();
         let result = reader.read_next_into(&mut record);
         assert!(result.is_err());
@@ -561,7 +616,7 @@ AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ
 
     #[test]
     fn incomplete_second_record() {
-        let mut reader = FastqReader::new("test".to_string(), INCOMPLETE_SECOND_RECORD);
+        let mut reader = FastqReader::new(INCOMPLETE_SECOND_RECORD);
         let mut record = FastqRecord::new();
         let result = reader.read_next_into(&mut record);
         assert!(result.is_ok(), "Error reading valid first FASTQ record");
