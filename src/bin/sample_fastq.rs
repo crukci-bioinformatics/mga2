@@ -103,6 +103,8 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+/// Read records from a set of FASTQ files and return a randomly selected sample
+/// of the specified size.
 fn sample_fastq(
     fastq_files: &[PathBuf],
     sample_size: u32,
@@ -161,6 +163,7 @@ fn sample_fastq(
     Ok((sampled_records, number_of_records_read))
 }
 
+/// Write FASTQ records to a file or stdout.
 fn write_fastq_records(records: &[FastqRecord], output_file: &Option<PathBuf>) -> Result<()> {
     match output_file {
         Some(file) => info!(
@@ -191,19 +194,21 @@ fn write_fastq_records(records: &[FastqRecord], output_file: &Option<PathBuf>) -
     Ok(())
 }
 
+/// Sampling summary of the number of FASTQ records read and the number sampled.
 #[derive(Debug, Serialize)]
 struct Summary {
+    /// The ID for this sampling run.
     id: String,
+
+    /// The number of FASTQ records read.
     read: u64,
+
+    /// The number of FASTQ records in the sample.
     sampled: u32,
 }
 
-fn write_summary(
-    id: &Option<String>,
-    read: u64,
-    sampled: u32,
-    summary_file: &Path,
-) -> Result<()> {
+/// Write the sampling summary to a CSV file.
+fn write_summary(id: &Option<String>, read: u64, sampled: u32, summary_file: &Path) -> Result<()> {
     let summary_filename = summary_file.to_str().unwrap();
     info!("Writing summary to {}", summary_filename);
     let id = match id {
@@ -226,6 +231,7 @@ fn write_summary(
     Ok(())
 }
 
+/// Check that the given set of FASTQ records have unique identifiers.
 fn check_unique_record_ids(records: &[FastqRecord]) -> Result<()> {
     info!("Checking sampled records have unique identifiers");
     let mut ids = HashSet::new();

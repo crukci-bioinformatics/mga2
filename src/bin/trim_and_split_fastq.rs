@@ -9,7 +9,9 @@ use structopt::StructOpt;
 
 /// Configuration parameters specified as command-line options.
 #[derive(StructOpt)]
-#[structopt(about = "Trim sequences from FASTQ files and split into chunks in FASTQ and/or FASTA format.")]
+#[structopt(
+    about = "Trim sequences from FASTQ files and split into chunks in FASTQ and/or FASTA format."
+)]
 struct Config {
     /// Input FASTQ files containing sequences to be trimmed and split into
     /// chunks.
@@ -75,6 +77,8 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+/// Read records from a set of FASTQ files, trimming the sequence and quality
+/// strings and writing the resulting trimmed FASTQ records in chunks to files.
 fn trim_and_split(
     fastq_files: &[PathBuf],
     output_prefix: &str,
