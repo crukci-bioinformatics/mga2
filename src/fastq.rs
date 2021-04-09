@@ -1,7 +1,10 @@
 //! Functions for reading and writing FASTQ records.
 //! 
-//! Example of reading a FASTQ file, iterating over each record and counting
-//! the cumulative number of bases. This creates a new
+//! ## Examples
+//! 
+//! ### Reading FASTQ records from stdin
+//! 
+//! Example of reading FASTQ records from stdin in which a new
 //! [`FastqRecord`](struct.FastqRecord.html) struct for each record.
 //! 
 //! ```
@@ -27,7 +30,7 @@
 //! ```
 //! 
 //! A single FastqRecord struct can be reused for each iteration to avoid the
-//! cost of creating new instances.
+//! cost of allocating memory for each new record.
 //! 
 //! ```
 //! # use anyhow::Result;
@@ -48,6 +51,30 @@
 //! # Ok(())
 //! # }
 //! ```
+//! 
+//! ### Reading and writing FASTQ records
+//! 
+//! The following example reads FASTQ records from stdin, trims sequences to
+//! 50 bases and writes the resulting records to stdout.
+//! 
+//! ```
+//! # use anyhow::Result;
+//! use mga2::fastq::{FastqReader, FastqWriter, FastqRecord};
+//! use std::io::{self, BufReader, BufWriter};
+//! 
+//! # fn main() -> Result<()> {
+//! let mut reader = FastqReader::new(BufReader::new(io::stdin()));
+//! let mut record = FastqRecord::new();
+//! 
+//! let mut writer = FastqWriter::new(BufWriter::new(io::stdout()));
+//! 
+//! while reader.read_next_into(&mut record)? {
+//!     record.trim_to_length(50)?;
+//!     writer.write_fastq(&record)?;
+//! }
+//! # Ok(())
+//! # }
+//! ```
 
 use anyhow::{bail, Context, Result};
 use flate2::bufread::MultiGzDecoder;
@@ -57,15 +84,28 @@ use std::fs::File;
 use std::io::{stdout, BufRead, BufReader, BufWriter, ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
 
+/// A FASTQ record.
 #[derive(Clone, Default)]
 pub struct FastqRecord {
+    /// The sequence identifier - the first part of the first line of the FASTQ
+    /// record immediately after the '@' character up to the first space
+    /// character.
     pub id: String,
+
+    /// An optional description - the remainder of the first line of the FASTQ
+    /// record following the first space character.
     pub desc: Option<String>,
+
+    /// The sequence string.
     pub seq: String,
+
+    /// The quality score string - each character represents a Phred quality
+    /// score representing the confidence of the base call.
     pub qual: String,
 }
 
 impl FastqRecord {
+    /// Create an empty `FastqRecord`.
     pub fn new() -> FastqRecord {
         FastqRecord {
             id: String::new(),
@@ -75,6 +115,8 @@ impl FastqRecord {
         }
     }
 
+    /// Create an empty `FastqRecord` allocating memory for the expected size of
+    /// the record identifier and sequence length.
     pub fn with_capacity(id_capacity: usize, sequence_capacity: usize) -> FastqRecord {
         FastqRecord {
             id: String::with_capacity(id_capacity),
@@ -84,6 +126,7 @@ impl FastqRecord {
         }
     }
 
+    /// Clear the contents of the `FastqRecord`.
     pub fn clear(&mut self) {
         self.id.clear();
         self.desc = None;
@@ -91,10 +134,19 @@ impl FastqRecord {
         self.qual.clear();
     }
 
+    /// Returns `true` if the sequence is empty.
     pub fn is_empty(&mut self) -> bool {
         self.seq.is_empty()
     }
 
+    /// Checks the validity of the `FastqRecord`.
+    ///
+    /// # Errors
+    /// Returns an error if:
+    /// - The record identifier is empty
+    /// - The sequence or quality score strings contain non-ASCII characters
+    /// - The sequence and quality strings have differing lengths
+    /// 
     pub fn check(&self) -> Result<()> {
         if self.id.is_empty() {
             bail!("Missing identifier for FASTQ record");
@@ -115,6 +167,15 @@ impl FastqRecord {
         Ok(())
     }
 
+    /// Trims the sequence and quality strings such that the retained portion
+    /// starts at the given `start` position and, optionally, ends at the given
+    /// `end` position.
+    /// 
+    /// # Errors
+    /// Returns an error if:
+    /// - The sequence and quality strings have differing lengths
+    /// - The given `start` position is zero - numbering starts from 1
+    /// - `end` < `start`
     pub fn trim(&mut self, start: usize, end: Option<usize>) -> Result<()> {
         let length = self.seq.len();
         if self.qual.len() != length {
@@ -150,6 +211,13 @@ impl FastqRecord {
         Ok(())
     }
 
+    /// Trims the sequence and quality strings to the given `length`.
+    /// 
+    /// Sequences that are shorter than the specified length are unchanged.
+    ///
+    /// # Errors
+    /// Returns an error if:
+    /// - The sequence and quality strings have differing lengths
     pub fn trim_to_length(&mut self, length: usize) -> Result<()> {
         if self.seq.len() != self.qual.len() {
             bail!("Attempt to trim FASTQ record with differing sequence and quality lengths");
