@@ -5,7 +5,7 @@ nextflow.enable.dsl = 2
 
 
 // -----------------------------------------------------------------------------
-// default parameter settings are in 'nextflow.config'
+// show settings and/or help
 // -----------------------------------------------------------------------------
 
 if (params.showSettings) {
@@ -55,6 +55,7 @@ minimumSequenceLength = params.trimStart + params.trimLength - 1
 // processes
 // -----------------------------------------------------------------------------
 
+// check input sample sheet and details of genomes to be screened
 process check_inputs {
     executor "local"
     stageInMode 'copy'
@@ -81,7 +82,7 @@ process check_inputs {
         """
 }
 
-
+// sample records from input FASTQ file(s)
 process sample_fastq {
     tag "${id} ${name}"
 
@@ -113,6 +114,7 @@ process sample_fastq {
 }
 
 
+// trim sequences and split into chunks
 process trim_and_split {
     executor "local"
 
@@ -137,6 +139,7 @@ process trim_and_split {
 }
 
 
+// align trimmed sequences in a chunk file against a reference genome using bowtie
 process bowtie {
     tag "${prefix}.${genome}"
 
@@ -173,6 +176,7 @@ process bowtie {
 }
 
 
+// align untrimmed sequences in a chunk file against adapter sequences using exonerate
 process exonerate {
     tag "${prefix}.adapters"
 
@@ -209,6 +213,7 @@ process exonerate {
 }
 
 
+// create summary tables and stacked bar chart
 process create_summary {
     publishDir "${params.outputDir}", mode: 'copy'
 
