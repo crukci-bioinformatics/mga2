@@ -1,12 +1,12 @@
 //! Functions for reading and writing FASTQ records.
-//! 
-//! ## Examples
-//! 
-//! ### Reading FASTQ records from stdin
-//! 
+//!
+//! # Examples
+//!
+//! ## Reading FASTQ records from stdin
+//!
 //! Example of reading FASTQ records from stdin in which a new
-//! [`FastqRecord`](struct.FastqRecord.html) struct for each record.
-//! 
+//! [`FastqRecord`](struct.FastqRecord.html) struct is created for each record.
+//!
 //! ```
 //! # use anyhow::Result;
 //! use mga2::fastq::FastqReader;
@@ -28,19 +28,19 @@
 //! # Ok(())
 //! # }
 //! ```
-//! 
-//! A single FastqRecord struct can be reused for each iteration to avoid the
-//! cost of allocating memory for each new record.
-//! 
+//!
+//! A single FastqRecord struct can be reused for each new record to avoid the
+//! cost of allocating memory in each iteration.
+//!
 //! ```
 //! # use anyhow::Result;
 //! use mga2::fastq::{FastqReader, FastqRecord};
 //! use std::io::{self, BufReader};
-//! 
+//!
 //! # fn main() -> Result<()> {
 //! let mut reader = FastqReader::new(BufReader::new(io::stdin()));
 //! let mut record = FastqRecord::new();
-//! 
+//!
 //! let mut number_of_records = 0;
 //! let mut number_of_bases = 0;
 //!
@@ -51,23 +51,23 @@
 //! # Ok(())
 //! # }
 //! ```
-//! 
-//! ### Reading and writing FASTQ records
-//! 
+//!
+//! ## Reading and writing FASTQ records
+//!
 //! The following example reads FASTQ records from stdin, trims sequences to
 //! 50 bases and writes the resulting records to stdout.
-//! 
+//!
 //! ```
 //! # use anyhow::Result;
 //! use mga2::fastq::{FastqReader, FastqWriter, FastqRecord};
 //! use std::io::{self, BufReader, BufWriter};
-//! 
+//!
 //! # fn main() -> Result<()> {
 //! let mut reader = FastqReader::new(BufReader::new(io::stdin()));
 //! let mut record = FastqRecord::new();
-//! 
+//!
 //! let mut writer = FastqWriter::new(BufWriter::new(io::stdout()));
-//! 
+//!
 //! while reader.read_next_into(&mut record)? {
 //!     record.trim_to_length(50)?;
 //!     writer.write_fastq(&record)?;
@@ -85,6 +85,19 @@ use std::io::{stdout, BufRead, BufReader, BufWriter, ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
 
 /// A FASTQ record.
+///
+/// # Example
+///
+/// ```
+/// use mga2::fastq::FastqRecord;
+///
+/// let record = FastqRecord {
+///     id: "MDE123".to_string(),
+///     desc: Some("An example FASTQ record".to_string()),
+///     seq: "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string(),
+///     qual: "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string(),
+/// };
+/// ```
 #[derive(Clone, Default)]
 pub struct FastqRecord {
     /// The sequence identifier - the first part of the first line of the FASTQ
@@ -106,6 +119,14 @@ pub struct FastqRecord {
 
 impl FastqRecord {
     /// Create an empty `FastqRecord`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use mga2::fastq::FastqRecord;
+    ///
+    /// let mut record = FastqRecord::new();
+    /// ```
     pub fn new() -> FastqRecord {
         FastqRecord {
             id: String::new(),
@@ -116,7 +137,17 @@ impl FastqRecord {
     }
 
     /// Create an empty `FastqRecord` allocating memory for the expected size of
-    /// the record identifier and sequence length.
+    /// the record identifier and sequence length. The quality string is
+    /// expected to be the same length as the sequence and allocated with the
+    /// same capacity.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use mga2::fastq::FastqRecord;
+    ///
+    /// let mut record = FastqRecord::with_capacity(40, 150);
+    /// ```
     pub fn with_capacity(id_capacity: usize, sequence_capacity: usize) -> FastqRecord {
         FastqRecord {
             id: String::with_capacity(id_capacity),
@@ -127,6 +158,23 @@ impl FastqRecord {
     }
 
     /// Clear the contents of the `FastqRecord`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use mga2::fastq::FastqRecord;
+    ///
+    /// let mut record = FastqRecord {
+    ///     id: "MDE123".to_string(),
+    ///     desc: Some("An example FASTQ record".to_string()),
+    ///     seq: "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string(),
+    ///     qual: "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string(),
+    /// };
+    /// assert!(!record.is_empty());
+    ///
+    /// record.clear();
+    /// assert!(record.is_empty());
+    /// ```
     pub fn clear(&mut self) {
         self.id.clear();
         self.desc = None;
@@ -135,18 +183,51 @@ impl FastqRecord {
     }
 
     /// Returns `true` if the sequence is empty.
-    pub fn is_empty(&mut self) -> bool {
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use mga2::fastq::FastqRecord;
+    ///
+    /// let mut record = FastqRecord::new();
+    /// assert!(record.is_empty());
+    ///
+    /// record.id = "MDE123".to_string();
+    /// record.seq = "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string();
+    /// record.qual = "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string();
+    /// assert!(!record.is_empty());
+    /// ```
+    pub fn is_empty(&self) -> bool {
         self.seq.is_empty()
     }
 
     /// Checks the validity of the `FastqRecord`.
     ///
+    /// # Example
+    ///
+    /// ```
+    /// use mga2::fastq::FastqRecord;
+    ///
+    /// let mut record = FastqRecord::new();
+    ///
+    /// record.id = "MDE123".to_string();
+    /// record.seq = "AAATéTCCGGA".to_string();
+    /// record.qual = "AAFFFJJJJJJ".to_string();
+    ///
+    /// let result = record.check();
+    /// assert!(result.is_err());
+    ///
+    /// let error = result.unwrap_err();
+    /// assert_eq!(error.to_string(), "Sequence string contains non-ASCII character(s)");
+    /// ```
+    ///
     /// # Errors
+    ///
     /// Returns an error if:
     /// - The record identifier is empty
     /// - The sequence or quality score strings contain non-ASCII characters
     /// - The sequence and quality strings have differing lengths
-    /// 
+    ///
     pub fn check(&self) -> Result<()> {
         if self.id.is_empty() {
             bail!("Missing identifier for FASTQ record");
@@ -170,12 +251,32 @@ impl FastqRecord {
     /// Trims the sequence and quality strings such that the retained portion
     /// starts at the given `start` position and, optionally, ends at the given
     /// `end` position.
-    /// 
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use mga2::fastq::FastqRecord;
+    ///
+    /// let mut record = FastqRecord {
+    ///     id: "MDE123".to_string(),
+    ///     desc: Some("An example FASTQ record".to_string()),
+    ///     seq: "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string(),
+    ///     qual: "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string(),
+    /// };
+    ///
+    /// record.trim(11, Some(30));
+    /// assert_eq!(record.seq.len(), 20);
+    /// assert_eq!(record.seq, "GAAGTTGTTAAAATTTCCGG");
+    /// assert_eq!(record.qual.len(), 20);
+    /// ```
+    ///
     /// # Errors
+    ///
     /// Returns an error if:
     /// - The sequence and quality strings have differing lengths
     /// - The given `start` position is zero - numbering starts from 1
     /// - `end` < `start`
+    ///
     pub fn trim(&mut self, start: usize, end: Option<usize>) -> Result<()> {
         let length = self.seq.len();
         if self.qual.len() != length {
@@ -212,12 +313,33 @@ impl FastqRecord {
     }
 
     /// Trims the sequence and quality strings to the given `length`.
-    /// 
+    ///
     /// Sequences that are shorter than the specified length are unchanged.
     ///
+    /// # Example
+    ///
+    /// ```
+    /// use mga2::fastq::FastqRecord;
+    ///
+    /// let mut record = FastqRecord {
+    ///     id: "MDE123".to_string(),
+    ///     desc: Some("An example FASTQ record".to_string()),
+    ///     seq: "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string(),
+    ///     qual: "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string(),
+    /// };
+    ///
+    /// record.trim_to_length(30);
+    /// assert_eq!(record.seq.len(), 30);
+    /// assert_eq!(record.seq, "TGTGACCCAAGAAGTTGTTAAAATTTCCGG");
+    /// assert_eq!(record.qual.len(), 30);
+    /// assert_eq!(record.qual, "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJ");
+    /// ```
+    ///
     /// # Errors
+    ///
     /// Returns an error if:
     /// - The sequence and quality strings have differing lengths
+    ///
     pub fn trim_to_length(&mut self, length: usize) -> Result<()> {
         if self.seq.len() != self.qual.len() {
             bail!("Attempt to trim FASTQ record with differing sequence and quality lengths");
@@ -741,8 +863,14 @@ TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
         let result = record.trim(11, None);
         assert!(result.is_ok(), "Unexpected error during trimming");
         assert!(record.check().is_ok(), "Invalid record after trimming");
-        assert_eq!(record.seq, "GAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string());
-        assert_eq!(record.qual, "JJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string());
+        assert_eq!(
+            record.seq,
+            "GAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string()
+        );
+        assert_eq!(
+            record.qual,
+            "JJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string()
+        );
     }
 
     #[test]
@@ -751,17 +879,28 @@ TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
         let result = record.trim(11, Some(1000));
         assert!(result.is_ok(), "Unexpected error during trimming");
         assert!(record.check().is_ok(), "Invalid record after trimming");
-        assert_eq!(record.seq, "GAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string());
-        assert_eq!(record.qual, "JJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string());
+        assert_eq!(
+            record.seq,
+            "GAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string()
+        );
+        assert_eq!(
+            record.qual,
+            "JJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string()
+        );
     }
-    
     #[test]
     fn trim_to_length() {
         let mut record = create_record();
         let result = record.trim_to_length(36);
         assert!(result.is_ok(), "Unexpected error during trimming");
         assert!(record.check().is_ok(), "Invalid record after trimming");
-        assert_eq!(record.seq, "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAG".to_string());
-        assert_eq!(record.qual, "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJ".to_string());
+        assert_eq!(
+            record.seq,
+            "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAG".to_string()
+        );
+        assert_eq!(
+            record.qual,
+            "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJ".to_string()
+        );
     }
 }
