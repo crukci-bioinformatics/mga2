@@ -8,16 +8,16 @@ option_list <- list(
 
   make_option(c("--samples"), dest = "samples_file",
               help = "Sample sheet file containing details of species and controls for each sample/dataset"),
-  
+
   make_option(c("--genomes"), dest = "genomes_file",
               help = "Genomes file containing list of indexed reference genome sequences and associated species"),
-  
+
   make_option(c("--counts"), dest = "counts_file",
               help = "Sequence counts file output by sample-fastq containing id, read and sampled columns"),
 
   make_option(c("--alignments"), dest = "alignments_file",
               help = "Alignments file with collated output from bowtie with genome, read, strand, chromosome, position, sequence, quality, num and mismatch columns"),
-  
+
   make_option(c("--adapter-alignments"), dest = "adapter_alignments_file",
               help = "Adapter alignments file with collated output from exonerate with read, start, end, strand, adapter, adapter_start, adapter_end, adapter_strand, percent_identity and score columns"),
 
@@ -153,11 +153,11 @@ sort_adapters <- function(alignments, pos) {
   if (length(missing_columns) > 0) {
     stop("Missing columns in ", adapter_alignments_file, " (", str_c(missing_columns, collapse = ", "), ")")
   }
-  
+
   alignments <- alignments %>%
     separate(read, into = c("id", "read"), sep = "\\|", extra = "merge") %>%
     select(id, all_of(adapter_alignment_columns))
-  
+
   for (sample_id in sample_ids) {
     alignments %>%
       filter(id == sample_id) %>%
@@ -224,7 +224,7 @@ sort_alignments <- function(alignments, pos) {
   alignments <- alignments %>%
     separate(read, into = c("id", "read"), sep = "\\|", extra = "merge") %>%
     select(id, all_of(alignment_columns))
-  
+
   for (sample_id in sample_ids) {
     alignments %>%
       filter(id == sample_id) %>%
@@ -279,7 +279,7 @@ for (sample_id in sample_ids) {
     mutate(expected = replace_na(expected, FALSE)) %>%
     left_join(control_genomes, by = c("id", "genome")) %>%
     mutate(control = replace_na(control, FALSE))
-  
+
   # add to summary for expected genomes
   summary <- alignments %>%
     filter(expected, !control) %>%
@@ -293,7 +293,7 @@ for (sample_id in sample_ids) {
     mutate(percentage = ifelse(total == 0, 0.0, round(100 * count / total, digits = 1))) %>%
     select(id, count, percentage, error_rate)
   expected_summary <- bind_rows(expected_summary, summary)
-  
+
   # add to summary for control genomes
   summary <- alignments %>%
     filter(control) %>%
@@ -332,7 +332,7 @@ for (sample_id in sample_ids) {
 
   # count alignments for each genome
   genome_counts <- count(alignments, genome, name = "genome_count")
-  
+
   # assign reads to genomes giving priority to expected genomes and then to the
   # genome with the largest number of aligned reads (those with fewest
   # mismatches)

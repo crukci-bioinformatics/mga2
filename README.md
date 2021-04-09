@@ -387,7 +387,7 @@ output file names, e.g.
 The summary bar chart displays two separate bars for each sample or dataset, one
 representing the genome alignments and the other adapter matches. The genome bar
 contains separate segments for each genome to which sampled reads have been
-assigned and a segment for unmapped reads. The sizes of the segments are based 
+assigned and a segment for unmapped reads. The sizes of the segments are based
 on the sampled reads and have been scaled for the total number of sequences.
 
 
@@ -485,11 +485,11 @@ display a message to this effect such as the following:
 
 To update MGA run the following command:
 
-    nextflow pull crukci-bioinformatics/mga2 
+    nextflow pull crukci-bioinformatics/mga2
 
 ---
 
-## Requirements 
+## Requirements
 
 * [Nextflow](https://www.nextflow.io) 20.10.0 or above
 * [Singularity](https://sylabs.io/docs) or [Docker](https://www.docker.com)
