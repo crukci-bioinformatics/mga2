@@ -352,6 +352,25 @@ impl FastqRecord {
     }
 }
 
+/// A reader for FASTQ files.
+/// 
+/// # Example
+/// 
+/// ```
+/// # use anyhow::Result;
+/// use mga2::fastq::FastqReader;
+/// use std::io::{self, BufReader};
+///
+/// # fn main() -> Result<()> {
+/// let mut reader = FastqReader::new(BufReader::new(io::stdin()));
+///
+/// let record = reader.read_next();
+/// if let Some(record) = reader.read_next()? {
+///     println!("{} {}", record.id, record.seq);
+/// }
+/// # Ok(())
+/// # }
+/// ```
 pub struct FastqReader<R: BufRead> {
     reader: R,
     name: String,
@@ -362,14 +381,61 @@ pub struct FastqReader<R: BufRead> {
 }
 
 impl<R: BufRead> FastqReader<R> {
+    /// Create a new `FastqReader`.
+    /// 
+    /// ```
+    /// use mga2::fastq::FastqReader;
+    /// use std::io::{self, BufReader};
+    /// 
+    /// let mut reader = FastqReader::new(BufReader::new(io::stdin()));
+    /// ```
     pub fn new(reader: R) -> Self {
         FastqReader::with_capacity(reader, "unnamed", 50, 160)
     }
 
+    /// Create a new 'named' `FastqReader`
+    /// 
+    /// The name for the reader is used only for error messages, e.g. to append
+    /// the name of the file being read to the line number on which a problem
+    /// occurred.
+    /// 
+    /// ```
+    /// use mga2::fastq::FastqReader;
+    /// use std::fs::File;
+    /// # use std::io;
+    /// use std::io::BufReader;
+    /// 
+    /// # fn main() -> io::Result<()> {
+    /// let fastq_filename = "test.fq";
+    /// let fastq_file = File::open(fastq_filename)?;
+    /// let mut reader = FastqReader::with_name(BufReader::new(fastq_file), fastq_filename);
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn with_name(reader: R, name: &str) -> Self {
         FastqReader::with_capacity(reader, name, 50, 160)
     }
 
+    /// Create a new `FastqReader` that will allocate new records with the
+    /// specified capacities for 
+    /// 
+    /// The name for the reader is used only for error messages, e.g. to append
+    /// the name of the file being read to the line number on which a problem
+    /// occurred.
+    /// 
+    /// ```
+    /// use mga2::fastq::FastqReader;
+    /// use std::fs::File;
+    /// # use std::io;
+    /// use std::io::BufReader;
+    /// 
+    /// # fn main() -> io::Result<()> {
+    /// let fastq_filename = "test.fq";
+    /// let fastq_file = File::open(fastq_filename)?;
+    /// let mut reader = FastqReader::with_name(BufReader::new(fastq_file), fastq_filename);
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn with_capacity(
         reader: R,
         name: &str,
