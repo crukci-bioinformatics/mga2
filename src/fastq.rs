@@ -490,6 +490,13 @@ impl<R: BufRead> FastqReader<R> {
 
     /// Reads the next FASTQ record.
     ///
+    /// This method creates a new `FastqRecord`. This may be desirable if
+    /// records are being added to a collection for subsequent processing but if
+    /// records are processed one at a time and are no longer required
+    /// afterwards, the [`read_next_into`](struct.FastqReader.html#method.read_next_into)
+    /// method may be preferable as it will avoid unnecessary and costly memory
+    /// allocation.
+    ///
     /// # Example
     ///
     /// ```
@@ -518,11 +525,11 @@ impl<R: BufRead> FastqReader<R> {
 
     /// Reads the next FASTQ record into an existing `FastqRecord`.
     ///
-    /// This function is preferred over [`read_next`](fn.read_next.html) when
-    /// iterating over large numbers of FASTQ records where the record is only
-    /// required for the duration of that iteration as it avoids the cost of
-    /// allocating memory for a new `FastqRecord` for each record; instead the
-    /// provided `FastqRecord` is reused with its contents overwritten.
+    /// This function is preferred over [`read_next`](struct.FastqReader.html#method.read_next)
+    /// when iterating over large numbers of FASTQ records where the record is
+    /// only required for the duration of that iteration as it avoids the cost
+    /// of allocating memory for a new `FastqRecord` for each record; instead
+    /// the provided `FastqRecord` is reused with its contents overwritten.
     ///
     /// # Example
     ///
