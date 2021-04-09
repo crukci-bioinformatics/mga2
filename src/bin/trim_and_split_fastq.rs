@@ -1,36 +1,39 @@
+//! Trim sequences from FASTQ files and split into chunks in FASTQ and/or FASTA
+//! format.
+
 use anyhow::{bail, Result};
 use log::info;
 use mga2::fastq::{create_fastq_reader, create_fastq_writer, FastqRecord};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-/// Trim sequences from FASTQ files and split into chunks in FASTQ and/or FASTA
-/// format
+/// Configuration parameters specified as command-line options.
 #[derive(StructOpt)]
+#[structopt(about = "Trim sequences from FASTQ files and split into chunks in FASTQ and/or FASTA format.")]
 struct Config {
     /// Input FASTQ files containing sequences to be trimmed and split into
-    /// chunks
+    /// chunks.
     #[structopt(parse(from_os_str))]
     fastq_files: Vec<PathBuf>,
 
-    /// The prefix for output file names
+    /// The prefix for output file names.
     #[structopt(short, long)]
     output_prefix: String,
 
-    /// The chunk size for splitting records into separate files
+    /// The chunk size for splitting records into separate files.
     #[structopt(short = "n", long, default_value = "1000000")]
     chunk_size: u32,
 
-    /// The start position in reads (preceeding bases will be trimmed)
+    /// The start position in reads (preceeding bases will be trimmed).
     #[structopt(short, long)]
     start: Option<usize>,
 
-    /// The maximum length of trimmed sequences
+    /// The maximum length of trimmed sequences.
     #[structopt(short, long)]
     length: Option<usize>,
 
     /// Output FASTA files in addition to FASTQ chunks
-    /// (note that these will not be trimmed)
+    /// (note that these will not be trimmed).
     #[structopt(long)]
     output_fasta: bool,
 }

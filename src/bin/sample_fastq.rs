@@ -1,3 +1,5 @@
+//! Sample a specified number of records from a FASTQ file.
+
 use anyhow::{bail, Context, Result};
 use log::info;
 use mga2::fastq::{create_fastq_reader, create_fastq_writer, FastqRecord};
@@ -7,42 +9,43 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
-/// Sample a specified number of records from a FASTQ file.
+/// Configuration parameters specified as command-line options.
 #[derive(StructOpt)]
+#[structopt(about = "Sample a specified number of records from a FASTQ file.")]
 struct Config {
-    /// Identifier for dataset
+    /// Identifier for dataset.
     #[structopt(short, long)]
     id: Option<String>,
 
-    /// FASTQ file to sample records from
+    /// FASTQ file to sample records from.
     #[structopt(parse(from_os_str))]
     fastq_files: Vec<PathBuf>,
 
-    /// FASTQ file to which sampled records will be written
+    /// FASTQ file to which sampled records will be written.
     #[structopt(short, long)]
     output_file: Option<PathBuf>,
 
-    /// The number of records to sample
+    /// The number of records to sample.
     #[structopt(short = "n", long)]
     sample_size: u32,
 
-    /// The maximum number of records to read/sample from
+    /// The maximum number of records to read/sample from.
     #[structopt(short, long)]
     max_number_to_sample_from: Option<u64>,
 
-    /// The minimum length of sequences to include in the sample
+    /// The minimum length of sequences to include in the sample.
     #[structopt(short = "l", long)]
     min_sequence_length: Option<u32>,
 
-    // Prepend dataset identifier to record identifier
+    // Prepend dataset identifier to record identifier.
     #[structopt(short, long)]
     prepend_id: bool,
 
-    // Check record identifiers are unique
+    // Check record identifiers are unique.
     #[structopt(long)]
     check_unique_record_ids: bool,
 
-    /// Summary of the numbers of records read and sampled
+    /// Summary of the numbers of records read and sampled.
     #[structopt(short, long)]
     summary_file: Option<PathBuf>,
 }
