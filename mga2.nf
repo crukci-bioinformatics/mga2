@@ -57,7 +57,7 @@ minimumSequenceLength = params.trimStart + params.trimLength - 1
 
 // check input sample sheet and details of genomes to be screened
 process check_inputs {
-    executor "local"
+    executor 'local'
     stageInMode 'copy'
 
     input:
@@ -116,7 +116,7 @@ process sample_fastq {
 
 // trim sequences and split into chunks
 process trim_and_split {
-    executor "local"
+    executor 'local'
 
     input:
         path fastq
