@@ -353,9 +353,11 @@ impl FastqRecord {
 }
 
 /// A reader for FASTQ files.
-/// 
-/// # Example
-/// 
+///
+/// # Examples
+///
+/// ## Reading from stdin
+///
 /// ```
 /// # use anyhow::Result;
 /// use mga2::fastq::FastqReader;
@@ -371,6 +373,33 @@ impl FastqRecord {
 /// # Ok(())
 /// # }
 /// ```
+///
+/// ## Reading from a file
+///
+/// ```
+/// # use anyhow::Result;
+/// use mga2::fastq::FastqReader;
+/// use std::fs::File;
+/// use std::io::BufReader;
+///
+/// # fn main() -> Result<()> {
+/// let file = File::open("test.fq")?;
+/// let mut reader = FastqReader::new(BufReader::new(file));
+///
+/// let record = reader.read_next();
+/// if let Some(record) = reader.read_next()? {
+///     println!("{} {}", record.id, record.seq);
+/// }
+/// # Ok(())
+/// # }
+/// ```
+///
+/// Note that FASTQ files are usually gzip compressed and the
+/// [`create_fastq_reader`](fn.create_fastq_reader.html) function will wrap the
+/// buffered reader within a decoder if the file name has a ".gz" extension.
+/// The `create_fastq_reader` function is the preferred way of creating a
+/// `FastqReader` for FASTQ files.
+///
 pub struct FastqReader<R: BufRead> {
     reader: R,
     name: String,
@@ -382,11 +411,11 @@ pub struct FastqReader<R: BufRead> {
 
 impl<R: BufRead> FastqReader<R> {
     /// Create a new `FastqReader`.
-    /// 
+    ///
     /// ```
     /// use mga2::fastq::FastqReader;
     /// use std::io::{self, BufReader};
-    /// 
+    ///
     /// let mut reader = FastqReader::new(BufReader::new(io::stdin()));
     /// ```
     pub fn new(reader: R) -> Self {
@@ -394,21 +423,21 @@ impl<R: BufRead> FastqReader<R> {
     }
 
     /// Create a new 'named' `FastqReader`
-    /// 
+    ///
     /// The name for the reader is used only for error messages, e.g. to append
     /// the name of the file being read to the line number on which a problem
     /// occurred.
-    /// 
+    ///
     /// ```
     /// use mga2::fastq::FastqReader;
     /// use std::fs::File;
     /// # use std::io;
     /// use std::io::BufReader;
-    /// 
+    ///
     /// # fn main() -> io::Result<()> {
-    /// let fastq_filename = "test.fq";
-    /// let fastq_file = File::open(fastq_filename)?;
-    /// let mut reader = FastqReader::with_name(BufReader::new(fastq_file), fastq_filename);
+    /// let filename = "test.fq";
+    /// let file = File::open(filename)?;
+    /// let mut reader = FastqReader::with_name(BufReader::new(file), filename);
     /// # Ok(())
     /// # }
     /// ```
@@ -417,22 +446,22 @@ impl<R: BufRead> FastqReader<R> {
     }
 
     /// Create a new `FastqReader` that will allocate new records with the
-    /// specified capacities for 
-    /// 
+    /// specified capacities for
+    ///
     /// The name for the reader is used only for error messages, e.g. to append
     /// the name of the file being read to the line number on which a problem
     /// occurred.
-    /// 
+    ///
     /// ```
     /// use mga2::fastq::FastqReader;
     /// use std::fs::File;
     /// # use std::io;
     /// use std::io::BufReader;
-    /// 
+    ///
     /// # fn main() -> io::Result<()> {
-    /// let fastq_filename = "test.fq";
-    /// let fastq_file = File::open(fastq_filename)?;
-    /// let mut reader = FastqReader::with_name(BufReader::new(fastq_file), fastq_filename);
+    /// let filename = "test.fq";
+    /// let file = File::open(filename)?;
+    /// let mut reader = FastqReader::with_name(BufReader::new(file), filename);
     /// # Ok(())
     /// # }
     /// ```
@@ -452,12 +481,32 @@ impl<R: BufRead> FastqReader<R> {
         }
     }
 
+    /// Reads the next line into a buffer and returns the number of bytes read.
     fn read_next_line(&mut self, buffer: &mut String) -> usize {
         let number_of_bytes = self.reader.read_line(buffer).unwrap();
         self.line_count += 1;
         number_of_bytes
     }
 
+    /// Reads the next FASTQ record.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use anyhow::Result;
+    /// use mga2::fastq::FastqReader;
+    /// use std::io::{self, BufReader};
+    ///
+    /// # fn main() -> Result<()> {
+    /// let mut reader = FastqReader::new(BufReader::new(io::stdin()));
+    ///
+    /// let record = reader.read_next();
+    /// if let Some(record) = reader.read_next()? {
+    ///     println!("{} {}", record.id, record.seq);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn read_next(&mut self) -> Result<Option<FastqRecord>> {
         let mut record = FastqRecord::with_capacity(self.id_capacity, self.sequence_capacity);
         if self.read_next_into(&mut record)? {
@@ -467,6 +516,35 @@ impl<R: BufRead> FastqReader<R> {
         }
     }
 
+    /// Reads the next FASTQ record into an existing `FastqRecord`.
+    ///
+    /// This function is preferred over [`read_next`](fn.read_next.html) when
+    /// iterating over large numbers of FASTQ records where the record is only
+    /// required for the duration of that iteration as it avoids the cost of
+    /// allocating memory for a new `FastqRecord` for each record; instead the
+    /// provided `FastqRecord` is reused with its contents overwritten.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use anyhow::Result;
+    /// use mga2::fastq::{FastqReader, FastqRecord};
+    /// use std::io::{self, BufReader};
+    ///
+    /// # fn main() -> Result<()> {
+    /// let mut reader = FastqReader::new(BufReader::new(io::stdin()));
+    /// let mut record = FastqRecord::new();
+    ///
+    /// let mut number_of_records = 0;
+    /// let mut number_of_bases = 0;
+    ///
+    /// while reader.read_next_into(&mut record)? {
+    ///     number_of_records += 1;
+    ///     number_of_bases += record.seq.len();
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn read_next_into(&mut self, record: &mut FastqRecord) -> Result<bool> {
         record.clear();
 
@@ -594,33 +672,226 @@ impl<R: BufRead> FastqReader<R> {
     }
 }
 
+/// A writer for FASTQ records.
+///
+/// A `FastqWriter` writes  `FastqRecord` structs to an underlying `BufWriter`,
+/// usually to a file. The [`create_fastq_writer`](fn.create_fastq_writer.html)
+/// function is the preferred way of creating a `FastqWriter` when writing
+/// gzip compressed files.
+///
+/// # Examples
+///
+/// ## Writing to stdout
+///
+/// ```
+/// # use anyhow::Result;
+/// use mga2::fastq::{FastqWriter, FastqRecord};
+/// use std::io::{self, BufWriter};
+///
+/// # fn main() -> Result<()> {
+/// let mut writer = FastqWriter::new(BufWriter::new(io::stdout()));
+///
+/// let record = FastqRecord {
+///     id: "MDE123".to_string(),
+///     desc: Some("An example FASTQ record".to_string()),
+///     seq: "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string(),
+///     qual: "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string(),
+/// };
+///
+/// writer.write_fastq(&record)?;
+///
+/// writer.flush()?;
+/// # Ok(())
+/// # }
+/// ```
+///
+/// ## Writing to a file
+///
+/// ```
+/// # use anyhow::Result;
+/// use mga2::fastq::{FastqWriter, FastqRecord};
+/// use std::io::BufWriter;
+/// use std::fs::File;
+///
+/// # fn main() -> Result<()> {
+/// let file = File::create("test.fq")?;
+/// let mut writer = FastqWriter::new(BufWriter::new(file));
+///
+/// let record = FastqRecord {
+///     id: "MDE123".to_string(),
+///     desc: Some("An example FASTQ record".to_string()),
+///     seq: "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string(),
+///     qual: "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string(),
+/// };
+///
+/// writer.write_fastq(&record)?;
+///
+/// writer.flush()?;
+/// # Ok(())
+/// # }
+/// ```
+///
+/// ## Writing to a gzip compressed file
+///
+/// ```
+/// # use anyhow::Result;
+/// use mga2::fastq::{FastqRecord, create_fastq_writer};
+/// use std::path::PathBuf;
+///
+/// # fn main() -> Result<()> {
+/// let path = PathBuf::from("test.fq.gz");
+/// let mut writer = create_fastq_writer(&Some(path))?;
+///
+/// let record = FastqRecord {
+///     id: "MDE123".to_string(),
+///     desc: Some("An example FASTQ record".to_string()),
+///     seq: "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string(),
+///     qual: "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string(),
+/// };
+///
+/// writer.write_fastq(&record)?;
+///
+/// writer.flush()?;
+/// # Ok(())
+/// # }
+/// ```
 pub struct FastqWriter<W: Write> {
     writer: BufWriter<W>,
 }
 
 impl<W: Write> FastqWriter<W> {
+    /// Create a new `FastqWriter`.
+    ///
+    /// ```
+    /// use mga2::fastq::FastqWriter;
+    /// use std::io::{self, BufWriter};
+    ///
+    /// let mut writer = FastqWriter::new(BufWriter::new(io::stdout()));
+    /// ```
     pub fn new(writer: BufWriter<W>) -> Self {
         FastqWriter { writer }
     }
 
+    /// Write a FASTQ record.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use anyhow::Result;
+    /// use mga2::fastq::{FastqWriter, FastqRecord};
+    /// use std::io::{self, BufWriter};
+    ///
+    /// # fn main() -> Result<()> {
+    /// let mut writer = FastqWriter::new(BufWriter::new(io::stdout()));
+    ///
+    /// let record = FastqRecord {
+    ///     id: "MDE123".to_string(),
+    ///     desc: Some("An example FASTQ record".to_string()),
+    ///     seq: "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string(),
+    ///     qual: "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string(),
+    /// };
+    ///
+    /// writer.write_fastq(&record)?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn write_fastq(&mut self, record: &FastqRecord) -> Result<()> {
         write_fastq(&mut self.writer, record)
-            .with_context(|| format!("Error writing FASTA format for record: {}", record.id))?;
+            .with_context(|| format!("Error writing FASTQ format for record: {}", record.id))?;
         Ok(())
     }
 
+    /// Write a `FastqRecord` in FASTA format.
+    ///
+    /// The FASTA format contains a header similar to that for a FASTQ record
+    /// but with a '>' character in place of the '@' and with only the sequence,
+    /// no quality score sting.
+    ///
+    /// The sequences will be split across multiple lines each up to 80
+    /// characters long.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use anyhow::Result;
+    /// use mga2::fastq::{FastqWriter, FastqRecord};
+    /// use std::io::{self, BufWriter};
+    ///
+    /// # fn main() -> Result<()> {
+    /// let mut writer = FastqWriter::new(BufWriter::new(io::stdout()));
+    ///
+    /// let record = FastqRecord {
+    ///     id: "MDE123".to_string(),
+    ///     desc: Some("An example FASTQ record".to_string()),
+    ///     seq: "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string(),
+    ///     qual: "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string(),
+    /// };
+    ///
+    /// writer.write_fasta(&record)?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn write_fasta(&mut self, record: &FastqRecord) -> Result<()> {
         write_fasta(&mut self.writer, record)
             .with_context(|| format!("Error writing FASTA format for record: {}", record.id))?;
         Ok(())
     }
 
+    /// Flush this output stream, ensuring that all intermediate, buffered
+    /// contents are written.
+    ///
+    /// ```
+    /// # use anyhow::Result;
+    /// use mga2::fastq::{FastqWriter, FastqRecord};
+    /// use std::io::{self, BufWriter};
+    ///
+    /// # fn main() -> Result<()> {
+    /// let mut writer = FastqWriter::new(BufWriter::new(io::stdout()));
+    ///
+    /// let record = FastqRecord {
+    ///     id: "MDE123".to_string(),
+    ///     desc: Some("An example FASTQ record".to_string()),
+    ///     seq: "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string(),
+    ///     qual: "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string(),
+    /// };
+    ///
+    /// writer.write_fastq(&record)?;
+    ///
+    /// writer.flush()?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn flush(&mut self) -> Result<()> {
         self.writer.flush()?;
         Ok(())
     }
 }
 
+/// Create a `FastqReader` for reading `FastqRecord`s from a file.
+///
+/// This is the preferred way of creating a `FastqReader` for reading
+/// gzip compressed files which are recognized by having a '.gz' extension.
+///
+/// # Example
+///
+/// ## Reading from a gzip compressed file
+///
+/// ```
+/// # use anyhow::Result;
+/// use mga2::fastq::{FastqRecord, create_fastq_reader};
+/// use std::path::PathBuf;
+///
+/// # fn main() -> Result<()> {
+/// let path = PathBuf::from("test.fq.gz");
+/// let mut reader = create_fastq_reader(&path)?;
+///
+/// let record = reader.read_next();
+/// if let Some(record) = reader.read_next()? {
+///     println!("{} {}", record.id, record.seq);
+/// }
+/// # Ok(())
+/// # }
+/// ```
 pub fn create_fastq_reader(fastq_file: &Path) -> Result<FastqReader<BufReader<Box<dyn Read>>>> {
     let fastq_file_name = match fastq_file.to_str() {
         Some(name) => String::from(name),
@@ -647,6 +918,60 @@ pub fn create_fastq_reader(fastq_file: &Path) -> Result<FastqReader<BufReader<Bo
     Ok(fastq_reader)
 }
 
+/// Create a `FastqWriter` for writing `FastqRecord`s to a file.
+///
+/// This is the preferred way of creating a `FastqWriter` when writing
+/// gzip compressed files which are recognized by having a '.gz' extension.
+///
+/// # Examples
+///
+/// ## Writing to a gzip compressed file
+///
+/// ```
+/// # use anyhow::Result;
+/// use mga2::fastq::{FastqRecord, create_fastq_writer};
+/// use std::path::PathBuf;
+///
+/// # fn main() -> Result<()> {
+/// let path = PathBuf::from("test.fq.gz");
+/// let mut writer = create_fastq_writer(&Some(path))?;
+///
+/// let record = FastqRecord {
+///     id: "MDE123".to_string(),
+///     desc: Some("An example FASTQ record".to_string()),
+///     seq: "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string(),
+///     qual: "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string(),
+/// };
+///
+/// writer.write_fastq(&record)?;
+///
+/// writer.flush()?;
+/// # Ok(())
+/// # }
+/// ```
+///
+/// ## Writing to stdout
+///
+/// ```
+/// # use anyhow::Result;
+/// use mga2::fastq::{FastqRecord, create_fastq_writer};
+///
+/// # fn main() -> Result<()> {
+/// let mut writer = create_fastq_writer(&None)?;
+///
+/// let record = FastqRecord {
+///     id: "MDE123".to_string(),
+///     desc: Some("An example FASTQ record".to_string()),
+///     seq: "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string(),
+///     qual: "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string(),
+/// };
+///
+/// writer.write_fastq(&record)?;
+///
+/// writer.flush()?;
+/// # Ok(())
+/// # }
+/// ```
 pub fn create_fastq_writer(output_file: &Option<PathBuf>) -> Result<FastqWriter<Box<dyn Write>>> {
     let writer: Box<dyn Write> = match output_file {
         Some(output_file) => {
