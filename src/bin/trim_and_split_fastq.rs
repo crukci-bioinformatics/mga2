@@ -168,14 +168,12 @@ fn trim_and_split(
 
             count += 1;
             if count % 1_000_000 == 0 {
-                info!("{}", count);
+                info!("{} million records read", count / 1_000_000);
             }
         }
     }
 
-    if count % 1_000_000 != 0 {
-        info!("{}", count);
-    }
+    info!("Total number of records: {}", count);
 
     fastq_writer.flush()?;
     if let Some(ref mut fasta_writer) = fasta_writer {
