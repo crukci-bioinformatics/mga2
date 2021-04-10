@@ -173,7 +173,7 @@ fn trim_and_split(
         }
     }
 
-    info!("Total number of records: {}", count);
+    info!("{} records read", count);
 
     fastq_writer.flush()?;
     if let Some(ref mut fasta_writer) = fasta_writer {

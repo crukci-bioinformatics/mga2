@@ -157,8 +157,8 @@ fn sample_fastq(
         info!("{} records read from {}", count, filename);
     }
 
-    info!("Total records read: {}", number_of_records_read);
-    info!("Number of records sampled: {}", sampled_records.len());
+    info!("{} records read in total", number_of_records_read);
+    info!("{} records sampled", sampled_records.len());
 
     Ok((sampled_records, number_of_records_read))
 }
