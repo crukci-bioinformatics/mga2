@@ -14,7 +14,7 @@ use structopt::StructOpt;
 #[structopt(about = "Sample a specified number of records from a FASTQ file.")]
 struct Config {
     /// Identifier for dataset.
-    #[structopt(short, long)]
+    #[structopt(long)]
     id: Option<String>,
 
     /// FASTQ file to sample records from.
@@ -131,7 +131,7 @@ fn sample_fastq(
             number_of_records_read += 1;
 
             if number_of_records_read % 10_000_000 == 0 {
-                info!("{}", number_of_records_read);
+                info!("{} million records read", number_of_records_read / 1_000_000);
             }
 
             if min_sequence_length.is_none()
@@ -181,13 +181,11 @@ fn write_fastq_records(records: &[FastqRecord], output_file: &Option<PathBuf>) -
         count += 1;
         writer.write_fastq(record)?;
         if count % 10_000_000 == 0 {
-            info!("{}", count);
+            info!("{} million records written", count / 1_000_000);
         }
     }
 
-    if count % 10_000_000 != 0 {
-        info!("{}", count);
-    }
+    info!("{} records written", count);
 
     writer.flush()?;
 
