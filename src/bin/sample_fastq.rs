@@ -139,9 +139,7 @@ fn sample_fastq(
                 );
             }
 
-            if min_sequence_length.is_none()
-                || min_sequence_length.unwrap() as usize <= record.seq.len()
-            {
+            if min_sequence_length.unwrap_or(0) as usize <= record.seq.len() {
                 if sampled_records.len() < sample_size as usize {
                     sampled_records.push(record.clone());
                 } else {
