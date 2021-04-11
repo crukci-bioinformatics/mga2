@@ -565,7 +565,7 @@ impl<R: BufRead> FastqReader<R> {
                         continue;
                     } else {
                         bail!(
-                            "expected '@' character at beginning of line {}, {}",
+                            "Expected '@' character at beginning of line {}, {}",
                             self.line_count + 1,
                             self.name
                         );
@@ -576,7 +576,7 @@ impl<R: BufRead> FastqReader<R> {
                         return Ok(false);
                     } else {
                         bail!(
-                            "unexpected problem reading line {}, {}",
+                            "Unexpected problem reading line {}, {}",
                             self.line_count + 1,
                             self.name
                         );
@@ -599,7 +599,7 @@ impl<R: BufRead> FastqReader<R> {
 
         if record.id.is_empty() {
             bail!(
-                "error extracting sequence id for record at line {}, {}",
+                "Error extracting sequence id for record at line {}, {}",
                 self.line_count,
                 self.name
             );
@@ -611,7 +611,7 @@ impl<R: BufRead> FastqReader<R> {
             let number_of_bytes = self.read_next_line(&mut record.seq);
             match number_of_bytes {
                 0 => bail!(
-                    "incomplete record at line {}, {}",
+                    "Incomplete record at line {}, {}",
                     self.line_count - 1,
                     self.name
                 ),
@@ -632,7 +632,7 @@ impl<R: BufRead> FastqReader<R> {
                     // check for spaces in sequence
                     if record.seq[length..].find(' ').is_some() {
                         bail!(
-                            "sequence contains space(s) for record at line {}, {}",
+                            "Sequence contains space(s) for record at line {}, {}",
                             self.line_count,
                             self.name
                         );
@@ -647,7 +647,7 @@ impl<R: BufRead> FastqReader<R> {
             let number_of_bytes = self.read_next_line(&mut record.qual);
             match number_of_bytes {
                 0 => bail!(
-                    "incomplete record at line {}, {}",
+                    "Incomplete record at line {}, {}",
                     self.line_count - 1,
                     self.name
                 ),
@@ -660,7 +660,7 @@ impl<R: BufRead> FastqReader<R> {
 
         if record.qual.len() != length {
             bail!(
-                "sequence and quality lengths differ for record ending at line {}, {}",
+                "Sequence and quality lengths differ for record ending at line {}, {}",
                 self.line_count,
                 self.name
             );
@@ -669,7 +669,7 @@ impl<R: BufRead> FastqReader<R> {
         // check for spaces in quality scores
         if record.qual.find(' ').is_some() {
             bail!(
-                "qualities contains space(s) for record ending at line {}, {}",
+                "Qualities contains space(s) for record ending at line {}, {}",
                 self.line_count,
                 self.name
             );
@@ -1192,7 +1192,7 @@ TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
         let result = reader.read_next_into(&mut record);
         assert!(result.is_err());
         let error = result.unwrap_err();
-        assert!(error.to_string().starts_with("incomplete record at line"));
+        assert!(error.to_string().starts_with("Incomplete record at line"));
     }
 
     const INCOMPLETE_SECOND_RECORD: &[u8] = b"@MDE123 a sample read for testing
@@ -1217,7 +1217,7 @@ AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ
         let error = result.unwrap_err();
         assert!(error
             .to_string()
-            .starts_with("error extracting sequence id for record at line"));
+            .starts_with("Error extracting sequence id for record at line"));
     }
 
     #[test]
