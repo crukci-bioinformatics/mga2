@@ -2,7 +2,7 @@
 
 use anyhow::{bail, Context, Result};
 use log::info;
-use mga2::fastq::{create_fastq_reader, create_fastq_writer, FastqRecord};
+use mga2::fastq::{FastqReader, FastqRecord, FastqWriter};
 use rand::{thread_rng, Rng};
 use serde::Serialize;
 use std::collections::HashSet;
@@ -121,7 +121,7 @@ fn sample_fastq(
         let filename = fastq_file.to_str().unwrap();
         info!("Reading {}", filename);
 
-        let mut reader = create_fastq_reader(fastq_file)?;
+        let mut reader = FastqReader::from_file(fastq_file)?;
 
         let mut count = 0;
         let mut record = FastqRecord::new();
@@ -131,7 +131,10 @@ fn sample_fastq(
             number_of_records_read += 1;
 
             if number_of_records_read % 10_000_000 == 0 {
-                info!("{} million records read", number_of_records_read / 1_000_000);
+                info!(
+                    "{} million records read",
+                    number_of_records_read / 1_000_000
+                );
             }
 
             if min_sequence_length.is_none()
@@ -173,7 +176,7 @@ fn write_fastq_records(records: &[FastqRecord], output_file: &Option<PathBuf>) -
         None => info!("Writing sampled FASTQ records to stdout"),
     }
 
-    let mut writer = create_fastq_writer(output_file)?;
+    let mut writer = FastqWriter::to_file(output_file)?;
 
     // write sampled records
     let mut count = 0;

@@ -379,12 +379,11 @@ impl FastqRecord {
 /// ```
 /// # use anyhow::Result;
 /// use mga2::fastq::FastqReader;
-/// use std::fs::File;
-/// use std::io::BufReader;
+/// use std::path::PathBuf;
 ///
 /// # fn main() -> Result<()> {
-/// let file = File::open("test.fq")?;
-/// let mut reader = FastqReader::new(BufReader::new(file));
+/// let path = PathBuf::from("test.fq");
+/// let mut reader = FastqReader::from_file(&path)?;
 ///
 /// let record = reader.read_next();
 /// if let Some(record) = reader.read_next()? {
@@ -393,12 +392,6 @@ impl FastqRecord {
 /// # Ok(())
 /// # }
 /// ```
-///
-/// Note that FASTQ files are usually gzip compressed and the
-/// [`create_fastq_reader`](fn.create_fastq_reader.html) function will wrap the
-/// buffered reader within a decoder if the file name has a ".gz" extension.
-/// The `create_fastq_reader` function is the preferred way of creating a
-/// `FastqReader` for FASTQ files.
 ///
 pub struct FastqReader<R: BufRead> {
     reader: R,
@@ -682,12 +675,57 @@ impl<R: BufRead> FastqReader<R> {
     }
 }
 
+impl FastqReader<BufReader<Box<dyn Read>>> {
+    /// Create a `FastqReader` for reading `FastqRecord`s from a file.
+    ///
+    /// # Example
+    ///
+    /// ## Reading from a gzip compressed file
+    ///
+    /// ```
+    /// # use anyhow::Result;
+    /// use mga2::fastq::{FastqRecord, FastqReader};
+    /// use std::path::PathBuf;
+    ///
+    /// # fn main() -> Result<()> {
+    /// let path = PathBuf::from("test.fq.gz");
+    /// let mut reader = FastqReader::from_file(&path)?;
+    ///
+    /// let record = reader.read_next();
+    /// if let Some(record) = reader.read_next()? {
+    ///     println!("{} {}", record.id, record.seq);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn from_file(fastq_file: &Path) -> Result<Self> {
+        let filename = fastq_file
+            .to_str()
+            .context("Error obtaining FASTQ file name")?;
+
+        let file =
+            File::open(fastq_file).with_context(|| format!("Error opening file {}", filename))?;
+
+        let reader: Box<dyn Read> = if filename.ends_with(".gz") {
+            Box::new(MultiGzDecoder::new(BufReader::with_capacity(
+                64 * 1024,
+                file,
+            )))
+        } else {
+            Box::new(file)
+        };
+
+        let buffered_reader = BufReader::with_capacity(64 * 1024, reader);
+        let fastq_reader = FastqReader::with_name(buffered_reader, filename);
+
+        Ok(fastq_reader)
+    }
+}
+
 /// A writer for FASTQ records.
 ///
 /// A `FastqWriter` writes  `FastqRecord` structs to an underlying `BufWriter`,
-/// usually to a file. The [`create_fastq_writer`](fn.create_fastq_writer.html)
-/// function is the preferred way of creating a `FastqWriter` when writing
-/// gzip compressed files.
+/// usually to a file.
 ///
 /// # Examples
 ///
@@ -745,12 +783,12 @@ impl<R: BufRead> FastqReader<R> {
 ///
 /// ```
 /// # use anyhow::Result;
-/// use mga2::fastq::{FastqRecord, create_fastq_writer};
+/// use mga2::fastq::{FastqRecord, FastqWriter};
 /// use std::path::PathBuf;
 ///
 /// # fn main() -> Result<()> {
 /// let path = PathBuf::from("test.fq.gz");
-/// let mut writer = create_fastq_writer(&Some(path))?;
+/// let mut writer = FastqWriter::to_file(&Some(path))?;
 ///
 /// let record = FastqRecord {
 ///     id: "MDE123".to_string(),
@@ -877,129 +915,83 @@ impl<W: Write> FastqWriter<W> {
     }
 }
 
-/// Create a `FastqReader` for reading `FastqRecord`s from a file.
-///
-/// This is the preferred way of creating a `FastqReader` for reading
-/// gzip compressed files which are recognized by having a '.gz' extension.
-///
-/// # Example
-///
-/// ## Reading from a gzip compressed file
-///
-/// ```
-/// # use anyhow::Result;
-/// use mga2::fastq::{FastqRecord, create_fastq_reader};
-/// use std::path::PathBuf;
-///
-/// # fn main() -> Result<()> {
-/// let path = PathBuf::from("test.fq.gz");
-/// let mut reader = create_fastq_reader(&path)?;
-///
-/// let record = reader.read_next();
-/// if let Some(record) = reader.read_next()? {
-///     println!("{} {}", record.id, record.seq);
-/// }
-/// # Ok(())
-/// # }
-/// ```
-pub fn create_fastq_reader(fastq_file: &Path) -> Result<FastqReader<BufReader<Box<dyn Read>>>> {
-    let fastq_file_name = match fastq_file.to_str() {
-        Some(name) => String::from(name),
-        None => {
-            bail!("invalid file name for {:?}", fastq_file)
-        }
-    };
-
-    let file = File::open(fastq_file)
-        .with_context(|| format!("Error opening file {}", fastq_file_name))?;
-
-    let reader: Box<dyn Read> = if fastq_file.to_str().unwrap().ends_with(".gz") {
-        Box::new(MultiGzDecoder::new(BufReader::with_capacity(
-            64 * 1024,
-            file,
-        )))
-    } else {
-        Box::new(file)
-    };
-
-    let buffered_reader = BufReader::with_capacity(64 * 1024, reader);
-    let fastq_reader = FastqReader::with_name(buffered_reader, fastq_file_name.as_str());
-
-    Ok(fastq_reader)
-}
-
-/// Create a `FastqWriter` for writing `FastqRecord`s to a file.
-///
-/// This is the preferred way of creating a `FastqWriter` when writing
-/// gzip compressed files which are recognized by having a '.gz' extension.
-///
-/// # Examples
-///
-/// ## Writing to a gzip compressed file
-///
-/// ```
-/// # use anyhow::Result;
-/// use mga2::fastq::{FastqRecord, create_fastq_writer};
-/// use std::path::PathBuf;
-///
-/// # fn main() -> Result<()> {
-/// let path = PathBuf::from("test.fq.gz");
-/// let mut writer = create_fastq_writer(&Some(path))?;
-///
-/// let record = FastqRecord {
-///     id: "MDE123".to_string(),
-///     desc: Some("An example FASTQ record".to_string()),
-///     seq: "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string(),
-///     qual: "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string(),
-/// };
-///
-/// writer.write_fastq(&record)?;
-///
-/// writer.flush()?;
-/// # Ok(())
-/// # }
-/// ```
-///
-/// ## Writing to stdout
-///
-/// ```
-/// # use anyhow::Result;
-/// use mga2::fastq::{FastqRecord, create_fastq_writer};
-///
-/// # fn main() -> Result<()> {
-/// let mut writer = create_fastq_writer(&None)?;
-///
-/// let record = FastqRecord {
-///     id: "MDE123".to_string(),
-///     desc: Some("An example FASTQ record".to_string()),
-///     seq: "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string(),
-///     qual: "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string(),
-/// };
-///
-/// writer.write_fastq(&record)?;
-///
-/// writer.flush()?;
-/// # Ok(())
-/// # }
-/// ```
-pub fn create_fastq_writer(output_file: &Option<PathBuf>) -> Result<FastqWriter<Box<dyn Write>>> {
-    let writer: Box<dyn Write> = match output_file {
-        Some(output_file) => {
-            let output_filename = output_file.to_str().unwrap();
-            let file = File::create(output_file)?;
-            if output_filename.ends_with(".gz") {
-                Box::new(GzEncoder::new(file, Compression::fast()))
-            } else {
-                Box::new(file)
+impl FastqWriter<Box<dyn Write>> {
+    /// Create a `FastqWriter` for writing `FastqRecord`s to a file.
+    ///
+    /// This is the preferred way of creating a `FastqWriter` when writing
+    /// gzip compressed files which are recognized by having a '.gz' extension.
+    ///
+    /// # Examples
+    ///
+    /// ## Writing to a gzip compressed file
+    ///
+    /// ```
+    /// # use anyhow::Result;
+    /// use mga2::fastq::{FastqRecord, FastqWriter};
+    /// use std::path::PathBuf;
+    ///
+    /// # fn main() -> Result<()> {
+    /// let path = PathBuf::from("test.fq.gz");
+    /// let mut writer = FastqWriter::to_file(&Some(path))?;
+    ///
+    /// let record = FastqRecord {
+    ///     id: "MDE123".to_string(),
+    ///     desc: Some("An example FASTQ record".to_string()),
+    ///     seq: "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string(),
+    ///     qual: "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string(),
+    /// };
+    ///
+    /// writer.write_fastq(&record)?;
+    ///
+    /// writer.flush()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// ## Writing to stdout
+    ///
+    /// ```
+    /// # use anyhow::Result;
+    /// use mga2::fastq::{FastqRecord, FastqWriter};
+    ///
+    /// # fn main() -> Result<()> {
+    /// let mut writer = FastqWriter::to_file(&None)?;
+    ///
+    /// let record = FastqRecord {
+    ///     id: "MDE123".to_string(),
+    ///     desc: Some("An example FASTQ record".to_string()),
+    ///     seq: "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string(),
+    ///     qual: "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string(),
+    /// };
+    ///
+    /// writer.write_fastq(&record)?;
+    ///
+    /// writer.flush()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[allow(clippy::wrong_self_convention)]
+    pub fn to_file(path: &Option<PathBuf>) -> Result<Self> {
+        let writer: Box<dyn Write> = match path {
+            Some(path) => {
+                let filename = path
+                    .to_str()
+                    .context("Error obtaining output FASTQ file name")?;
+                let file = File::create(path)?;
+                if filename.ends_with(".gz") {
+                    Box::new(GzEncoder::new(file, Compression::fast()))
+                } else {
+                    Box::new(file)
+                }
             }
-        }
-        None => Box::new(stdout()),
-    };
+            None => Box::new(stdout()),
+        };
 
-    let buffered_writer = BufWriter::new(writer);
-    let fastq_writer = FastqWriter::new(buffered_writer);
+        let buffered_writer = BufWriter::new(writer);
+        let fastq_writer = FastqWriter::new(buffered_writer);
 
-    Ok(fastq_writer)
+        Ok(fastq_writer)
+    }
 }
 
 fn write_fastq(writer: &mut dyn Write, record: &FastqRecord) -> Result<()> {

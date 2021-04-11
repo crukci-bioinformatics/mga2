@@ -3,7 +3,7 @@
 
 use anyhow::{bail, Result};
 use log::info;
-use mga2::fastq::{create_fastq_reader, create_fastq_writer, FastqRecord};
+use mga2::fastq::{FastqReader, FastqRecord, FastqWriter};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -96,14 +96,14 @@ fn trim_and_split(
         "{}.{}.fq",
         output_prefix, output_file_count
     )));
-    let mut fastq_writer = create_fastq_writer(&output_fastq_path)?;
+    let mut fastq_writer = FastqWriter::to_file(&output_fastq_path)?;
 
     let mut fasta_writer = if output_fasta {
         let output_fasta_path = Some(PathBuf::from(format!(
             "{}.{}.fa",
             output_prefix, output_file_count
         )));
-        Some(create_fastq_writer(&output_fasta_path)?)
+        Some(FastqWriter::to_file(&output_fasta_path)?)
     } else {
         None
     };
@@ -114,7 +114,7 @@ fn trim_and_split(
         let filename = fastq_file.to_str().unwrap();
         info!("Reading {}", filename);
 
-        let mut fastq_reader = create_fastq_reader(fastq_file)?;
+        let mut fastq_reader = FastqReader::from_file(fastq_file)?;
 
         let mut record = FastqRecord::new();
 
@@ -133,14 +133,14 @@ fn trim_and_split(
                     "{}.{}.fq",
                     output_prefix, output_file_count
                 )));
-                fastq_writer = create_fastq_writer(&output_fastq_path)?;
+                fastq_writer = FastqWriter::to_file(&output_fastq_path)?;
 
                 fasta_writer = if output_fasta {
                     let output_fasta_path = Some(PathBuf::from(format!(
                         "{}.{}.fa",
                         output_prefix, output_file_count
                     )));
-                    Some(create_fastq_writer(&output_fasta_path)?)
+                    Some(FastqWriter::to_file(&output_fasta_path)?)
                 } else {
                     None
                 };
