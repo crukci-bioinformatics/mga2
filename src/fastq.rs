@@ -482,10 +482,13 @@ impl<R: BufRead> FastqReader<R> {
     }
 
     /// Reads the next line into a buffer and returns the number of bytes read.
-    fn read_next_line(&mut self, buffer: &mut String) -> usize {
-        let number_of_bytes = self.reader.read_line(buffer).unwrap();
+    fn read_next_line(&mut self, buffer: &mut String) -> Result<usize> {
+        let number_of_bytes = self
+            .reader
+            .read_line(buffer)
+            .context("Unexpected error reading FASTQ")?;
         self.line_count += 1;
-        number_of_bytes
+        Ok(number_of_bytes)
     }
 
     /// Reads the next FASTQ record.
@@ -585,7 +588,7 @@ impl<R: BufRead> FastqReader<R> {
             }
         }
 
-        self.read_next_line(&mut record.id);
+        self.read_next_line(&mut record.id)?;
 
         match record.id.find(' ') {
             Some(length) => {
@@ -608,7 +611,7 @@ impl<R: BufRead> FastqReader<R> {
         let mut length = 0;
 
         loop {
-            let number_of_bytes = self.read_next_line(&mut record.seq);
+            let number_of_bytes = self.read_next_line(&mut record.seq)?;
             match number_of_bytes {
                 0 => bail!(
                     "Incomplete record at line {}, {}",
@@ -644,7 +647,7 @@ impl<R: BufRead> FastqReader<R> {
 
         let mut qual_length = 0;
         while qual_length < length {
-            let number_of_bytes = self.read_next_line(&mut record.qual);
+            let number_of_bytes = self.read_next_line(&mut record.qual)?;
             match number_of_bytes {
                 0 => bail!(
                     "Incomplete record at line {}, {}",
