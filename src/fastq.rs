@@ -84,6 +84,8 @@ use std::fs::File;
 use std::io::{stdout, BufRead, BufReader, BufWriter, ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
 
+const FASTA_SEQUENCE_LINE_WIDTH: usize = 80;
+
 /// A FASTQ record.
 ///
 /// # Example
@@ -347,6 +349,43 @@ impl FastqRecord {
         if length < self.seq.len() {
             self.seq = self.seq.as_str()[..length].to_string();
             self.qual = self.qual.as_str()[..length].to_string();
+        }
+        Ok(())
+    }
+
+    /// Write record in FASTQ format to the given writer.
+    fn write_fastq(&self, writer: &mut dyn Write) -> Result<()> {
+        writer.write_all(b"@")?;
+        writer.write_all(self.id.as_bytes())?;
+        if let Some(desc) = &self.desc {
+            writer.write_all(b" ")?;
+            writer.write_all(desc.as_bytes())?;
+        }
+        writer.write_all(b"\n")?;
+        writer.write_all(self.seq.as_bytes())?;
+        writer.write_all(b"\n+\n")?;
+        writer.write_all(self.qual.as_bytes())?;
+        writer.write_all(b"\n")?;
+        Ok(())
+    }
+
+    /// Write record in FASTA format to the given writer.
+    fn write_fasta(&self, writer: &mut dyn Write) -> Result<()> {
+        writer.write_all(b">")?;
+        writer.write_all(self.id.as_bytes())?;
+        if let Some(desc) = &self.desc {
+            writer.write_all(b" ")?;
+            writer.write_all(desc.as_bytes())?;
+        }
+        writer.write_all(b"\n")?;
+        let sequence = self.seq.as_bytes();
+        let length = sequence.len();
+        let mut position = 0;
+        while position < length {
+            writer
+                .write_all(&sequence[position..length.min(position + FASTA_SEQUENCE_LINE_WIDTH)])?;
+            writer.write_all(b"\n")?;
+            position += FASTA_SEQUENCE_LINE_WIDTH;
         }
         Ok(())
     }
@@ -716,6 +755,7 @@ impl FastqReader<BufReader<Box<dyn Read>>> {
         };
 
         let buffered_reader = BufReader::with_capacity(64 * 1024, reader);
+
         let fastq_reader = FastqReader::with_name(buffered_reader, filename);
 
         Ok(fastq_reader)
@@ -844,8 +884,9 @@ impl<W: Write> FastqWriter<W> {
     /// # }
     /// ```
     pub fn write_fastq(&mut self, record: &FastqRecord) -> Result<()> {
-        write_fastq(&mut self.writer, record)
-            .with_context(|| format!("Error writing FASTQ format for record: {}", record.id))?;
+        record
+            .write_fastq(&mut self.writer)
+            .with_context(|| format!("Error writing record in FASTQ format: {}", record.id))?;
         Ok(())
     }
 
@@ -880,8 +921,9 @@ impl<W: Write> FastqWriter<W> {
     /// # }
     /// ```
     pub fn write_fasta(&mut self, record: &FastqRecord) -> Result<()> {
-        write_fasta(&mut self.writer, record)
-            .with_context(|| format!("Error writing FASTA format for record: {}", record.id))?;
+        record
+            .write_fasta(&mut self.writer)
+            .with_context(|| format!("Error writing record in FASTA format: {}", record.id))?;
         Ok(())
     }
 
@@ -992,42 +1034,6 @@ impl FastqWriter<Box<dyn Write>> {
 
         Ok(fastq_writer)
     }
-}
-
-fn write_fastq(writer: &mut dyn Write, record: &FastqRecord) -> Result<()> {
-    writer.write_all(b"@")?;
-    writer.write_all(record.id.as_bytes())?;
-    if let Some(desc) = &record.desc {
-        writer.write_all(b" ")?;
-        writer.write_all(desc.as_bytes())?;
-    }
-    writer.write_all(b"\n")?;
-    writer.write_all(record.seq.as_bytes())?;
-    writer.write_all(b"\n+\n")?;
-    writer.write_all(record.qual.as_bytes())?;
-    writer.write_all(b"\n")?;
-    Ok(())
-}
-
-const FASTA_WIDTH: usize = 80;
-
-fn write_fasta(writer: &mut dyn Write, record: &FastqRecord) -> Result<()> {
-    writer.write_all(b">")?;
-    writer.write_all(record.id.as_bytes())?;
-    if let Some(desc) = &record.desc {
-        writer.write_all(b" ")?;
-        writer.write_all(desc.as_bytes())?;
-    }
-    writer.write_all(b"\n")?;
-    let sequence = record.seq.as_bytes();
-    let length = sequence.len();
-    let mut position = 0;
-    while position < length {
-        writer.write_all(&sequence[position..length.min(position + FASTA_WIDTH)])?;
-        writer.write_all(b"\n")?;
-        position += FASTA_WIDTH;
-    }
-    Ok(())
 }
 
 #[cfg(test)]
