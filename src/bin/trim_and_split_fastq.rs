@@ -1,7 +1,7 @@
 //! Trim sequences from FASTQ files and split into chunks in FASTQ and/or FASTA
 //! format.
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use log::info;
 use mga2::fastq::{FastqReader, FastqRecord, FastqWriter};
 use std::path::PathBuf;
@@ -111,7 +111,9 @@ fn trim_and_split(
     let mut chunk_count = 0;
 
     for fastq_file in fastq_files {
-        let filename = fastq_file.to_str().unwrap();
+        let filename = fastq_file
+            .to_str()
+            .context("Error obtaining FASTQ file name")?;
         info!("Reading {}", filename);
 
         let mut fastq_reader = FastqReader::from_file(fastq_file)?;
