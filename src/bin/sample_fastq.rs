@@ -118,7 +118,9 @@ fn sample_fastq(
 
     // loop over and sample from input FASTQ files using reservoir sampling
     'outer: for fastq_file in fastq_files {
-        let filename = fastq_file.to_str().unwrap();
+        let filename = fastq_file
+            .to_str()
+            .context("Error obtaining FASTQ file name")?;
         info!("Reading {}", filename);
 
         let mut reader = FastqReader::from_file(fastq_file)?;
@@ -171,7 +173,8 @@ fn write_fastq_records(records: &[FastqRecord], output_file: &Option<PathBuf>) -
     match output_file {
         Some(file) => info!(
             "Writing sampled FASTQ records to {}",
-            file.to_str().unwrap()
+            file.to_str()
+                .context("Error obtaining name of output FASTQ file")?
         ),
         None => info!("Writing sampled FASTQ records to stdout"),
     }
@@ -210,7 +213,9 @@ struct Summary {
 
 /// Write the sampling summary to a CSV file.
 fn write_summary(id: &Option<String>, read: u64, sampled: u32, summary_file: &Path) -> Result<()> {
-    let summary_filename = summary_file.to_str().unwrap();
+    let summary_filename = summary_file
+        .to_str()
+        .context("Error obtaining summary file name")?;
     info!("Writing summary to {}", summary_filename);
     let id = match id {
         Some(id) => id.clone(),
