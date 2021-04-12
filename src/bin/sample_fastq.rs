@@ -1,6 +1,6 @@
 //! Sample a specified number of records from a FASTQ file.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{ensure, Context, Result};
 use log::info;
 use mga2::fastq::{FastqReader, FastqRecord, FastqWriter};
 use rand::{thread_rng, Rng};
@@ -55,24 +55,22 @@ fn main() -> Result<()> {
 
     let config = Config::from_args();
 
-    if config.fastq_files.is_empty() {
-        bail!("No input FASTQ files specified");
-    }
+    ensure!(
+        !config.fastq_files.is_empty(),
+        "No input FASTQ files specified"
+    );
 
-    if config.sample_size == 0 {
-        bail!("Invalid sample size");
-    }
+    ensure!(config.sample_size > 0, "Invalid sample size");
 
     if let Some(max_number_to_sample_from) = config.max_number_to_sample_from {
-        if max_number_to_sample_from == 0 {
-            bail!("Invalid maximum number of records to sample from");
-        }
+        ensure!(
+            max_number_to_sample_from > 0,
+            "Invalid maximum number of records to sample from"
+        );
     }
 
     if let Some(min_sequence_length) = config.min_sequence_length {
-        if min_sequence_length == 0 {
-            bail!("Invalid minimum sequence length");
-        }
+        ensure!(min_sequence_length > 0, "Invalid minimum sequence length");
     }
 
     let (mut records, total) = sample_fastq(
@@ -240,9 +238,10 @@ fn check_unique_record_ids(records: &[FastqRecord]) -> Result<()> {
     info!("Checking sampled records have unique identifiers");
     let mut ids = HashSet::new();
     for record in records {
-        if ids.contains(&record.id) {
-            bail!("Duplicate record identifiers found among sampled records");
-        }
+        ensure!(
+            !ids.contains(&record.id),
+            "Duplicate record identifiers found among sampled records"
+        );
         ids.insert(record.id.clone());
     }
     Ok(())

@@ -1,7 +1,7 @@
 //! Trim sequences from FASTQ files and split into chunks in FASTQ and/or FASTA
 //! format.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{ensure, Context, Result};
 use log::info;
 use mga2::fastq::{FastqReader, FastqRecord, FastqWriter};
 use std::path::PathBuf;
@@ -45,24 +45,22 @@ fn main() -> Result<()> {
 
     let config = Config::from_args();
 
-    if config.fastq_files.is_empty() {
-        bail!("No input FASTQ files specified");
-    }
+    ensure!(
+        !config.fastq_files.is_empty(),
+        "No input FASTQ files specified"
+    );
 
-    if config.chunk_size == 0 {
-        bail!("Invalid chunk size");
-    }
+    ensure!(config.chunk_size > 0, "Invalid chunk size");
 
     if let Some(start) = config.start {
-        if start == 0 {
-            bail!("Invalid start position for trimming - numbering is 1-based");
-        }
+        ensure!(
+            start > 0,
+            "Invalid start position for trimming - numbering is 1-based"
+        );
     }
 
     if let Some(length) = config.length {
-        if length == 0 {
-            bail!("Zero length specified for trimmed sequences");
-        }
+        ensure!(length > 0, "Invalid length for trimmed sequences");
     }
 
     trim_and_split(
