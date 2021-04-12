@@ -1,3 +1,8 @@
+// Copyright (c) 2021 CRUK Cambridge Institute - Bioinformatics Core
+// Licensed under the MIT license (http://opensource.org/licenses/MIT)
+// This file may not be copied, modified, or distributed
+// except according to those terms.
+
 //! Functions for reading and writing FASTQ records.
 //!
 //! # Examples
@@ -5,7 +10,7 @@
 //! ## Reading FASTQ records from stdin
 //!
 //! Example of reading FASTQ records from stdin in which a new
-//! [`FastqRecord`](struct.FastqRecord.html) struct is created for each record.
+//! [`FastqRecord`] struct is created for each record.
 //!
 //! ```
 //! # use anyhow::Result;
@@ -29,8 +34,8 @@
 //! # }
 //! ```
 //!
-//! A single FastqRecord struct can be reused for each new record to avoid the
-//! cost of allocating memory in each iteration.
+//! A single [`FastqRecord`] struct can be reused for each new record to avoid
+//! the cost of allocating memory in each iteration.
 //!
 //! ```
 //! # use anyhow::Result;
@@ -120,7 +125,7 @@ pub struct FastqRecord {
 }
 
 impl FastqRecord {
-    /// Create an empty `FastqRecord`.
+    /// Create an empty [`FastqRecord`].
     ///
     /// # Example
     ///
@@ -138,8 +143,8 @@ impl FastqRecord {
         }
     }
 
-    /// Create an empty `FastqRecord` allocating memory for the expected size of
-    /// the record identifier and sequence length. The quality string is
+    /// Create an empty [`FastqRecord`] allocating memory for the expected size
+    /// of the record identifier and sequence length. The quality string is
     /// expected to be the same length as the sequence and allocated with the
     /// same capacity.
     ///
@@ -159,7 +164,7 @@ impl FastqRecord {
         }
     }
 
-    /// Clear the contents of the `FastqRecord`.
+    /// Clear the contents of the [`FastqRecord`].
     ///
     /// # Example
     ///
@@ -203,7 +208,7 @@ impl FastqRecord {
         self.seq.is_empty()
     }
 
-    /// Checks the validity of the `FastqRecord`.
+    /// Checks the validity of the [`FastqRecord`].
     ///
     /// # Example
     ///
@@ -449,7 +454,7 @@ pub struct FastqReader<R: BufRead> {
 }
 
 impl<R: BufRead> FastqReader<R> {
-    /// Create a new `FastqReader`.
+    /// Create a new [`FastqReader`].
     ///
     /// ```
     /// use mga2::fastq::FastqReader;
@@ -461,7 +466,7 @@ impl<R: BufRead> FastqReader<R> {
         FastqReader::with_capacity(reader, "unnamed", 50, 160)
     }
 
-    /// Create a new 'named' `FastqReader`
+    /// Create a new 'named' [`FastqReader`]
     ///
     /// The name for the reader is used only for error messages, e.g. to append
     /// the name of the file being read to the line number on which a problem
@@ -484,7 +489,7 @@ impl<R: BufRead> FastqReader<R> {
         FastqReader::with_capacity(reader, name, 50, 160)
     }
 
-    /// Create a new `FastqReader` that will allocate new records with the
+    /// Create a new [`FastqReader`] that will allocate new records with the
     /// specified capacities for
     ///
     /// The name for the reader is used only for error messages, e.g. to append
@@ -532,7 +537,7 @@ impl<R: BufRead> FastqReader<R> {
 
     /// Reads the next FASTQ record.
     ///
-    /// This method creates a new `FastqRecord`. This may be desirable if
+    /// This method creates a new [`FastqRecord`]. This may be desirable if
     /// records are being added to a collection for subsequent processing but if
     /// records are processed one at a time and are no longer required
     /// afterwards, the [`read_next_into`](struct.FastqReader.html#method.read_next_into)
@@ -565,13 +570,13 @@ impl<R: BufRead> FastqReader<R> {
         }
     }
 
-    /// Reads the next FASTQ record into an existing `FastqRecord`.
+    /// Reads the next FASTQ record into an existing [`FastqRecord`].
     ///
     /// This function is preferred over [`read_next`](struct.FastqReader.html#method.read_next)
     /// when iterating over large numbers of FASTQ records where the record is
     /// only required for the duration of that iteration as it avoids the cost
-    /// of allocating memory for a new `FastqRecord` for each record; instead
-    /// the provided `FastqRecord` is reused with its contents overwritten.
+    /// of allocating memory for a new [`FastqRecord`] for each record; instead
+    /// the provided [`FastqRecord`] is reused with its contents overwritten.
     ///
     /// # Example
     ///
@@ -722,7 +727,7 @@ impl<R: BufRead> FastqReader<R> {
 }
 
 impl FastqReader<BufReader<Box<dyn Read>>> {
-    /// Create a `FastqReader` for reading `FastqRecord`s from a file.
+    /// Create a [`FastqReader`] for reading [`FastqRecord`]s from a file.
     ///
     /// # Example
     ///
@@ -771,8 +776,8 @@ impl FastqReader<BufReader<Box<dyn Read>>> {
 
 /// A writer for FASTQ records.
 ///
-/// A `FastqWriter` writes  `FastqRecord` structs to an underlying `BufWriter`,
-/// usually to a file.
+/// A [`FastqWriter`] writes  [`FastqRecord`] structs to an underlying
+/// [`BufWriter`], usually to a file.
 ///
 /// # Examples
 ///
@@ -828,6 +833,11 @@ impl FastqReader<BufReader<Box<dyn Read>>> {
 ///
 /// ## Writing to a gzip compressed file
 ///
+/// [`FastqWriter::to_file()`] creates a [`FastqWriter`] the will write FASTQ
+/// records using gzip compression if the file name supplied has the 'gz'
+/// extension. The same function can be used to create a [`FastqWriter`] that
+/// writes uncompressed FASTQ.
+///
 /// ```
 /// # use anyhow::Result;
 /// use mga2::fastq::{FastqRecord, FastqWriter};
@@ -855,7 +865,7 @@ pub struct FastqWriter<W: Write> {
 }
 
 impl<W: Write> FastqWriter<W> {
-    /// Create a new `FastqWriter`.
+    /// Create a new [`FastqWriter`].
     ///
     /// ```
     /// use mga2::fastq::FastqWriter;
@@ -897,7 +907,7 @@ impl<W: Write> FastqWriter<W> {
         Ok(())
     }
 
-    /// Write a `FastqRecord` in FASTA format.
+    /// Write a [`FastqRecord`] in FASTA format.
     ///
     /// The FASTA format contains a header similar to that for a FASTQ record
     /// but with a '>' character in place of the '@' and with only the sequence,
@@ -965,10 +975,11 @@ impl<W: Write> FastqWriter<W> {
 }
 
 impl FastqWriter<Box<dyn Write>> {
-    /// Create a `FastqWriter` for writing `FastqRecord`s to a file.
+    /// Create a [`FastqWriter`] for writing [`FastqRecord`]s to a file.
     ///
-    /// This is the preferred way of creating a `FastqWriter` when writing
-    /// gzip compressed files which are recognized by having a '.gz' extension.
+    /// The [`FastqWriter`] created will write gzip-compressed FASTQ if the file
+    /// name supplied has the 'gz' extension. If no path is given, the
+    /// [`FastqWriter`] will write FASTQ records to stdout.
     ///
     /// # Examples
     ///
