@@ -76,7 +76,7 @@
 //! # }
 //! ```
 
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, ensure, Context, Result};
 use flate2::bufread::MultiGzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
@@ -231,21 +231,22 @@ impl FastqRecord {
     /// - The sequence and quality strings have differing lengths
     ///
     pub fn check(&self) -> Result<()> {
-        if self.id.is_empty() {
-            bail!("Missing identifier for FASTQ record");
-        }
+        ensure!(!self.id.is_empty(), "Missing identifier for FASTQ record");
 
-        if !self.seq.is_ascii() {
-            bail!("Sequence string contains non-ASCII character(s)");
-        }
+        ensure!(
+            self.seq.is_ascii(),
+            "Sequence string contains non-ASCII character(s)"
+        );
 
-        if !self.qual.is_ascii() {
-            bail!("Quality score string contains non-ASCII character(s)");
-        }
+        ensure!(
+            self.qual.is_ascii(),
+            "Quality score string contains non-ASCII character(s)"
+        );
 
-        if self.seq.len() != self.qual.len() {
-            bail!("Sequence and quality strings have different lengths");
-        }
+        ensure!(
+            self.seq.len() == self.qual.len(),
+            "Sequence and quality strings have different lengths"
+        );
 
         Ok(())
     }
@@ -281,18 +282,21 @@ impl FastqRecord {
     ///
     pub fn trim(&mut self, start: usize, end: Option<usize>) -> Result<()> {
         let length = self.seq.len();
-        if self.qual.len() != length {
-            bail!("Attempt to trim FASTQ record with differing sequence and quality lengths");
-        }
+        ensure!(
+            self.qual.len() == length,
+            "Attempt to trim FASTQ record with differing sequence and quality lengths"
+        );
 
-        if start == 0 {
-            bail!("Attempt to trim FASTQ record using invalid zero start position (numbering is 1-based)");
-        }
+        ensure!(
+            start > 0,
+            "Attempt to trim FASTQ record using invalid zero start position (numbering is 1-based)"
+        );
 
         if let Some(end) = end {
-            if end < start {
-                bail!("Attempt to trim FASTQ record with end < start");
-            }
+            ensure!(
+                end >= start,
+                "Attempt to trim FASTQ record with end < start"
+            );
         }
 
         if start > length {
@@ -343,13 +347,16 @@ impl FastqRecord {
     /// - The sequence and quality strings have differing lengths
     ///
     pub fn trim_to_length(&mut self, length: usize) -> Result<()> {
-        if self.seq.len() != self.qual.len() {
-            bail!("Attempt to trim FASTQ record with differing sequence and quality lengths");
-        }
+        ensure!(
+            self.seq.len() == self.qual.len(),
+            "Attempt to trim FASTQ record with differing sequence and quality lengths"
+        );
+
         if length < self.seq.len() {
             self.seq = self.seq.as_str()[..length].to_string();
             self.qual = self.qual.as_str()[..length].to_string();
         }
+
         Ok(())
     }
 
@@ -632,13 +639,12 @@ impl<R: BufRead> FastqReader<R> {
             }
         }
 
-        if record.id.is_empty() {
-            bail!(
-                "Error extracting sequence id for record at line {}, {}",
-                self.line_count,
-                self.name
-            );
-        }
+        ensure!(
+            !record.id.is_empty(),
+            "Error extracting sequence id for record at line {}, {}",
+            self.line_count,
+            self.name
+        );
 
         let mut length = 0;
 
@@ -652,6 +658,7 @@ impl<R: BufRead> FastqReader<R> {
                 ),
                 1 => {
                     // empty line
+                    // remove newline character
                     record.seq.pop();
                 }
                 _ => {
@@ -665,13 +672,12 @@ impl<R: BufRead> FastqReader<R> {
                     // remove newline character
                     record.seq.pop();
                     // check for spaces in sequence
-                    if record.seq[length..].find(' ').is_some() {
-                        bail!(
-                            "Sequence contains space(s) for record at line {}, {}",
-                            self.line_count,
-                            self.name
-                        );
-                    }
+                    ensure!(
+                        record.seq[length..].find(' ').is_none(),
+                        "Sequence contains space(s) for record at line {}, {}",
+                        self.line_count,
+                        self.name
+                    );
                     length = record.seq.len();
                 }
             };
@@ -686,29 +692,30 @@ impl<R: BufRead> FastqReader<R> {
                     self.line_count - 1,
                     self.name
                 ),
+                1 => {
+                    // empty line
+                    record.seq.pop();
+                }
                 _ => {
                     record.qual.pop();
+                    // check for spaces in quality string
+                    ensure!(
+                        record.qual[qual_length..].find(' ').is_none(),
+                        "Quality string contains space(s) for record at line {}, {}",
+                        self.line_count,
+                        self.name
+                    );
+                    qual_length = record.qual.len();
                 }
             };
-            qual_length = record.qual.len();
         }
 
-        if record.qual.len() != length {
-            bail!(
-                "Sequence and quality lengths differ for record ending at line {}, {}",
-                self.line_count,
-                self.name
-            );
-        }
-
-        // check for spaces in quality scores
-        if record.qual.find(' ').is_some() {
-            bail!(
-                "Qualities contains space(s) for record ending at line {}, {}",
-                self.line_count,
-                self.name
-            );
-        }
+        ensure!(
+            record.qual.len() == length,
+            "Sequence and quality lengths differ for record ending at line {}, {}",
+            self.line_count,
+            self.name
+        );
 
         Ok(true)
     }
@@ -1053,9 +1060,28 @@ TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
 AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ
 ";
 
-    const INCOMPLETE_RECORD: &[u8] = b"@MDE123 a sample read for testing
+    const FASTA_RECORD: &[u8] = b">MDE123 a sample read for testing
+TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
+";
+
+    const INVALID_SEPARATOR: &[u8] = b">MDE123 a sample read for testing
 TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
 +
+AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ
+";
+
+    const INCOMPLETE_RECORD1: &[u8] = b"@MDE123 a sample read for testing";
+
+    const INCOMPLETE_RECORD2: &[u8] = b"@MDE123 a sample read for testing
+TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
++
+";
+
+    const INCOMPLETE_SECOND_RECORD: &[u8] = b"@MDE123 a sample read for testing
+TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
++
+AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ
+@
 ";
 
     fn create_record() -> FastqRecord {
@@ -1124,7 +1150,7 @@ TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
     }
 
     #[test]
-    fn differing_sequence_and_quality_strings() {
+    fn differing_sequence_and_quality_lengths() {
         let mut record = FastqRecord::new();
         record.id = RECORD_ID.to_string();
         record.seq = SEQUENCE.to_string();
@@ -1138,6 +1164,169 @@ TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
         assert_eq!(
             error.to_string(),
             "Sequence and quality strings have different lengths"
+        );
+    }
+
+    #[test]
+    fn trim_start_and_end() {
+        let mut record = create_record();
+        let result = record.trim(11, Some(35));
+        assert!(result.is_ok(), "Unexpected error during trimming");
+        assert!(record.check().is_ok(), "Invalid record after trimming");
+        assert_eq!(record.seq, "GAAGTTGTTAAAATTTCCGGAGGTA".to_string());
+    }
+
+    #[test]
+    fn trim_start() {
+        let mut record = create_record();
+        let result = record.trim(11, None);
+        assert!(result.is_ok(), "Unexpected error during trimming");
+        assert!(record.check().is_ok(), "Invalid record after trimming");
+        assert_eq!(
+            record.seq,
+            "GAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string()
+        );
+        assert_eq!(
+            record.qual,
+            "JJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string()
+        );
+    }
+
+    #[test]
+    fn trim_invalid_start() {
+        let mut record = create_record();
+        let result = record.trim(0, None);
+        assert!(
+            result.is_err(),
+            "Expected error when trimming from start position of 0"
+        );
+        let error = result.unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "Attempt to trim FASTQ record using invalid zero start position (numbering is 1-based)"
+        );
+    }
+
+    #[test]
+    fn trim_same_start_and_end() {
+        let mut record = create_record();
+        let result = record.trim(21, Some(21));
+        assert!(
+            result.is_ok(),
+            "Unxpected error when trimming with same start and end"
+        );
+        assert!(record.check().is_ok(), "Invalid record after trimming");
+        assert_eq!(record.seq, "A".to_string());
+    }
+
+    #[test]
+    fn trim_invalid_start_and_end() {
+        let mut record = create_record();
+        let result = record.trim(21, Some(20));
+        assert!(
+            result.is_err(),
+            "Expected error when trimming with start > end"
+        );
+        let error = result.unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "Attempt to trim FASTQ record with end < start"
+        );
+    }
+
+    #[test]
+    fn trim_differing_sequence_and_quality_lengths() {
+        let mut record = FastqRecord::new();
+        record.id = RECORD_ID.to_string();
+        record.seq = SEQUENCE.to_string();
+        record.qual = "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJ".to_string();
+        let result = record.trim(11, Some(35));
+        assert!(
+            result.is_err(),
+            "Expecting error when trimming record with differing lengths of sequence and quality strings"
+        );
+        let error = result.unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "Attempt to trim FASTQ record with differing sequence and quality lengths"
+        );
+    }
+
+    #[test]
+    fn trim_start_beyond_length() {
+        let mut record = create_record();
+        let result = record.trim(1001, Some(1050));
+        assert!(result.is_ok(), "Unexpected error during trimming");
+        assert!(record.check().is_ok(), "Invalid record after trimming");
+        assert!(
+            record.seq.is_empty(),
+            "Expecting empty sequence after trimming"
+        );
+        assert!(
+            record.qual.is_empty(),
+            "Expecting empty quality string after trimming"
+        );
+    }
+
+    #[test]
+    fn trim_end_beyond_length() {
+        let mut record = create_record();
+        let result = record.trim(11, Some(1000));
+        assert!(result.is_ok(), "Unexpected error during trimming");
+        assert!(record.check().is_ok(), "Invalid record after trimming");
+        assert_eq!(
+            record.seq,
+            "GAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string()
+        );
+        assert_eq!(
+            record.qual,
+            "JJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string()
+        );
+    }
+
+    #[test]
+    fn trim_to_length() {
+        let mut record = create_record();
+        let result = record.trim_to_length(36);
+        assert!(result.is_ok(), "Unexpected error during trimming");
+        assert!(record.check().is_ok(), "Invalid record after trimming");
+        assert_eq!(
+            record.seq,
+            "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAG".to_string()
+        );
+        assert_eq!(
+            record.qual,
+            "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJ".to_string()
+        );
+    }
+
+    #[test]
+    fn trim_to_length_beyond_length() {
+        let mut record = create_record();
+        let seq = record.seq.clone();
+        let qual = record.qual.clone();
+        let result = record.trim_to_length(1000);
+        assert!(result.is_ok(), "Unexpected error during trimming");
+        assert!(record.check().is_ok(), "Invalid record after trimming");
+        assert_eq!(record.seq, seq);
+        assert_eq!(record.qual, qual);
+    }
+
+    #[test]
+    fn trim_to_length_differing_sequence_and_quality_lengths() {
+        let mut record = FastqRecord::new();
+        record.id = RECORD_ID.to_string();
+        record.seq = SEQUENCE.to_string();
+        record.qual = "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJ".to_string();
+        let result = record.trim_to_length(50);
+        assert!(
+            result.is_err(),
+            "Expecting error when trimming record with differing lengths of sequence and quality strings"
+        );
+        let error = result.unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "Attempt to trim FASTQ record with differing sequence and quality lengths"
         );
     }
 
@@ -1187,8 +1376,23 @@ TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
     }
 
     #[test]
-    fn read_incomplete_record() {
-        let mut reader = FastqReader::new(INCOMPLETE_RECORD);
+    fn read_invalid_separator() {
+        let mut reader = FastqReader::new(INVALID_SEPARATOR);
+        let mut record = FastqRecord::new();
+        let result = reader.read_next_into(&mut record);
+        assert!(
+            result.is_err(),
+            "Expecting error reading record with invalid or missing separator"
+        );
+        let error = result.unwrap_err();
+        assert!(error
+            .to_string()
+            .starts_with("Expected '@' character at beginning of line"));
+    }
+
+    #[test]
+    fn read_incomplete_record1() {
+        let mut reader = FastqReader::new(INCOMPLETE_RECORD1);
         let mut record = FastqRecord::new();
         let result = reader.read_next_into(&mut record);
         assert!(result.is_err());
@@ -1196,12 +1400,15 @@ TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
         assert!(error.to_string().starts_with("Incomplete record at line"));
     }
 
-    const INCOMPLETE_SECOND_RECORD: &[u8] = b"@MDE123 a sample read for testing
-TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
-+
-AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ
-@
-";
+    #[test]
+    fn read_incomplete_record2() {
+        let mut reader = FastqReader::new(INCOMPLETE_RECORD2);
+        let mut record = FastqRecord::new();
+        let result = reader.read_next_into(&mut record);
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert!(error.to_string().starts_with("Incomplete record at line"));
+    }
 
     #[test]
     fn incomplete_second_record() {
@@ -1232,10 +1439,6 @@ AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ
         assert_eq!(writer.writer.get_ref(), &FASTQ_RECORD);
     }
 
-    const FASTA_RECORD: &[u8] = b">MDE123 a sample read for testing
-TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
-";
-
     #[test]
     fn write_fasta_record() {
         let record = create_record();
@@ -1245,61 +1448,5 @@ TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA
             .expect("Error writing FASTA record");
         writer.flush().expect("Error flushing FASTQ writer");
         assert_eq!(writer.writer.get_ref(), &FASTA_RECORD);
-    }
-
-    #[test]
-    fn trim_start_and_end() {
-        let mut record = create_record();
-        let result = record.trim(11, Some(35));
-        assert!(result.is_ok(), "Unexpected error during trimming");
-        assert!(record.check().is_ok(), "Invalid record after trimming");
-        assert_eq!(record.seq, "GAAGTTGTTAAAATTTCCGGAGGTA".to_string());
-    }
-
-    #[test]
-    fn trim_start() {
-        let mut record = create_record();
-        let result = record.trim(11, None);
-        assert!(result.is_ok(), "Unexpected error during trimming");
-        assert!(record.check().is_ok(), "Invalid record after trimming");
-        assert_eq!(
-            record.seq,
-            "GAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string()
-        );
-        assert_eq!(
-            record.qual,
-            "JJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string()
-        );
-    }
-
-    #[test]
-    fn trim_beyond_end() {
-        let mut record = create_record();
-        let result = record.trim(11, Some(1000));
-        assert!(result.is_ok(), "Unexpected error during trimming");
-        assert!(record.check().is_ok(), "Invalid record after trimming");
-        assert_eq!(
-            record.seq,
-            "GAAGTTGTTAAAATTTCCGGAGGTAGCCATTATATACCAA".to_string()
-        );
-        assert_eq!(
-            record.qual,
-            "JJJJJJJJJJIJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ".to_string()
-        );
-    }
-    #[test]
-    fn trim_to_length() {
-        let mut record = create_record();
-        let result = record.trim_to_length(36);
-        assert!(result.is_ok(), "Unexpected error during trimming");
-        assert!(record.check().is_ok(), "Invalid record after trimming");
-        assert_eq!(
-            record.seq,
-            "TGTGACCCAAGAAGTTGTTAAAATTTCCGGAGGTAG".to_string()
-        );
-        assert_eq!(
-            record.qual,
-            "AAFFFJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJ".to_string()
-        );
     }
 }
