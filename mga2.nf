@@ -356,22 +356,21 @@ def helpMessage() {
 
         Options:
             --help                        Show this message and exit
-            --sample-sheet                CSV file containing details of sample dataset (id, fastq, species and control columns required)
-            --fastq-dir                   Directory in which FASTQ files are located (optional, can specify absolute or relative paths in sample sheet instead)
-            --sample-size                 Number of sequences to sample for each sample/dataset
-            --max-number-to-sample-from   Maximum number of sequences to read/sample from
-            --chunk-size                  Number of sequences for each chunk for batch alignment of sampled sequences
-            --trim-start                  The position at which the trimmed sequence starts, all bases before this position are trimmed
-            --trim-length                 The length of the trimmed sequences
-            --genome-details              CSV file containing the species name and synonyms for each reference genome (genome, species and synonym colums required)
-            --bowtie-index-dir            Directory containing bowtie indexes for reference genomes
-            --adapters-fasta              FASTA file containing adapter sequences
-            --output-dir                  Directory to which output files are written
-            --output-prefix               Prefix for output file names
+            --sampleSheet                 CSV file containing details of sample dataset (id, fastq, species and control columns required)
+            --fastqDir                    Directory in which FASTQ files are located (optional, can specify absolute or relative paths in sample sheet instead)
+            --sampleSize                  Number of sequences to sample for each sample/dataset
+            --maxNumberToSampleFrom       Maximum number of sequences to read/sample from
+            --chunkSize                   Number of sequences for each chunk for batch alignment of sampled sequences
+            --trimStart                   The position at which the trimmed sequence starts, all bases before this position are trimmed
+            --trimLength                  The length of the trimmed sequences
+            --genomeDetails               CSV file containing the species name and synonyms for each reference genome (genome, species and synonym colums required)
+            --bowtieIndexDir              Directory containing bowtie indexes for reference genomes
+            --adaptersFasta               FASTA file containing adapter sequences
+            --outputDir                   Directory to which output files are written
+            --outputPrefix                Prefix for output file names
 
         Alternatively, override settings using a configuration file such as the
-        following, in which parameter names used are the camelCase equivalent of the
-        above options:
+        following:
 
         params {
             sampleSheet    = "samplesheet.csv"

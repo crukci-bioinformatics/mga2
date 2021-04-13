@@ -84,7 +84,7 @@ list separated by the '|' character.
 
 The fastq column can contain relative or absolute paths or may contain just
 the names of the FASTQ files with the FASTQ directory specified using the
-`--fastq-dir` command line option or with the `fastqDir` parameter in a config
+`--fastqDir` command line option or with the `fastqDir` parameter in a config
 file. MGA will prepend the `fastqDir` parameter, if set, to all FASTQ file names
 or paths given in the `fastq` column.
 
@@ -120,9 +120,7 @@ For example to set the trimming start position so that the trimmed (retained)
 part of the sequence to be aligned to reference genomes starts at position 21
 within each sampled sequence, the `trimStart` parameter can be set as follows:
 
-    nextflow run crukci-bioinformatics/mga2 --trim-start 21
-
-or alternatively using the camelCase name (`--trimStart 21`).
+    nextflow run crukci-bioinformatics/mga2 --trimStart 21
 
 A more convenient way of configuring several parameters is to use a
 configuration file, e.g. named `mga.config`, an example of which is shown below.
@@ -207,7 +205,7 @@ identify which bacterial, viral or fungal species are implicated.
 
 Details about each genome are provided in a genome metadata file. This is a CSV
 file containing 3 columns: `genome`, `species` and `synonyms`. If not specified
-using the `--genome-details` command line option or setting the `genomeDetails`
+using the `--genomeDetails` command line option or setting the `genomeDetails`
 parameter in a config file, an empty file named `genomes.csv` in the MGA
 installation `resources` directory will be used. It is recommended to create a
 `genomes.csv` file for the set of bowtie indexes used as this will enable MGA to
@@ -250,7 +248,7 @@ the equivalent file in [FastQC](https://www.bioinformatics.babraham.ac.uk/projec
 By default, MGA will use the file provided as part of the MGA installation in
 its `resources` subdirectory. In most cases this will be sufficient but if
 needed a custom adapters FASTA file can be specified using the
-`--adapters-fasta` command line option or setting the `adaptersFasta`
+`--adaptersFasta` command line option or setting the `adaptersFasta`
 parameter in a config file.
 
 Note that the `resources/adapters.fa` file contained in the MGA installation
@@ -353,9 +351,9 @@ debugging Nextflow pipelines.
 
 The work directories contain intermediate files produced when running MGA. The
 final outputs are written either to the launch directory or the directory
-specified using `--output-dir` or the `outputDir` parameter. The `work`
-directory can be deleted on successful completion of the MGA pipeline unless
-other Nextflow pipelines are also being run from the launch directory.
+specified using `--outputDir` or the `outputDir` parameter. The `work` directory
+can be deleted on successful completion of the MGA pipeline unless other
+Nextflow pipelines are also being run from the launch directory.
 
 ---
 
@@ -372,15 +370,15 @@ mga_genome_alignments.tsv.gz  | Table containing alignments with the fewest mism
 mga_adapter_alignments.tsv.gz | Table containing adapter matches for each of the sampled sequences
 
 The directory to which these files are written can be configured using the
-`--output-dir` command line option or the `outputDir` parameter if using a
-config file.
+`--outputDir` command line option or the `outputDir` parameter if using a config
+file.
 
 Additionally, it is possible to set a prefix for the file names using the
-`--output-prefix` command line option of the `outputPrefix` parameter. This
+`--outputPrefix` command line option or the `outputPrefix` parameter. This
 might be useful for prepending an identifier for the run or flow cell to the
 output file names, e.g.
 
-    nextflow run crukci-bioinformatics/mga2 --output-prefix="H3MTJDRXY"
+    nextflow run crukci-bioinformatics/mga2 --outputPrefix="H3MTJDRXY"
 
 ### Summary plot
 
