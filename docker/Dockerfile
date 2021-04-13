@@ -4,17 +4,22 @@ MAINTAINER Matt Eldridge "matthew.eldridge@cruk.cam.ac.uk" \
            version "2.0.0" \
            description "Multi-Genome Analysis (MGA) contaminant screen for genomic sequence data"
 
-RUN apt update && apt install -y git curl procps
+RUN apt-get update && \
+    apt-get install -y git curl procps && \
+    apt-get clean
 
-RUN curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /opt/miniconda3.sh && \
-    sh /opt/miniconda3.sh -b -p /opt/conda && \
-    rm /opt/miniconda3.sh
+ARG CONDA_VERSION=py38_4.9.2
+ARG CONDA_MD5=122c8c9beb51e124ab32a0fa6426c656
 
-ENV PATH ${PATH}:/opt/conda/bin
+RUN curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o miniconda3.sh && \
+    echo "${CONDA_MD5}  miniconda3.sh" > miniconda3.md5 && \
+    mkdir -p /opt && \
+    sh miniconda3.sh -b -p /opt/conda && \
+    rm miniconda3.sh miniconda3.md5
 
 COPY conda.yml .
 
-RUN conda env create -f conda.yml && conda clean -a
+RUN /opt/conda/bin/conda env create -f conda.yml && /opt/conda/bin/conda clean -a
 
 ENV PATH /opt/conda/envs/mga2/bin:$PATH
 
