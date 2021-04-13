@@ -1,8 +1,8 @@
 FROM rust:1.51-slim-buster
 
-MAINTAINER Matt Eldridge "matthew.eldridge@cruk.cam.ac.uk" \
-           version "2.0.0" \
-           description "Multi-Genome Analysis (MGA) contaminant screen for genomic sequence data"
+LABEL authors="Matt Eldridge" \
+      version="2.0.0" \
+      description="Multi-Genome Analysis (MGA) contaminant screen for genomic sequence data"
 
 RUN apt-get update && \
     apt-get install -y git curl procps && \
@@ -11,7 +11,7 @@ RUN apt-get update && \
 ARG CONDA_VERSION=py38_4.9.2
 ARG CONDA_MD5=122c8c9beb51e124ab32a0fa6426c656
 
-RUN curl https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o miniconda3.sh && \
+RUN curl https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-x86_64.sh -o miniconda3.sh && \
     echo "${CONDA_MD5}  miniconda3.sh" > miniconda3.md5 && \
     mkdir -p /opt && \
     sh miniconda3.sh -b -p /opt/conda && \
