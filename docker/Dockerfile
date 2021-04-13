@@ -27,6 +27,7 @@ ENV PATH /opt/conda/envs/mga2/bin:$PATH
 ADD "https://api.github.com/repos/crukci-bioinformatics/mga2/commits?per_page=1" /opt/mga2/.latest_commit
 
 ARG VERSION=master
+
 RUN git clone --branch ${VERSION} --depth 1 https://github.com/crukci-bioinformatics/mga2 /opt/mga2/build && \
     cargo install --path /opt/mga2/build
 
