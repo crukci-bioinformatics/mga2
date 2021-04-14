@@ -58,7 +58,6 @@ minimumSequenceLength = params.trimStart + params.trimLength - 1
 // check input sample sheet and details of genomes to be screened
 process check_inputs {
     executor 'local'
-    stageInMode 'copy'
 
     input:
         path samples
