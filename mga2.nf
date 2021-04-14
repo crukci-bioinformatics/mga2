@@ -57,6 +57,8 @@ minimumSequenceLength = params.trimStart + params.trimLength - 1
 
 // check input sample sheet and details of genomes to be screened
 process check_inputs {
+    label 'mga2'
+
     executor 'local'
 
     input:
@@ -84,6 +86,8 @@ process check_inputs {
 // sample records from input FASTQ file(s)
 process sample_fastq {
     tag "${id} ${name}"
+
+    label 'mga2'
 
     time 12.hour
 
@@ -115,6 +119,8 @@ process sample_fastq {
 
 // trim sequences and split into chunks
 process trim_and_split {
+    label 'mga2'
+
     executor 'local'
 
     input:
@@ -140,6 +146,8 @@ process trim_and_split {
 
 // align trimmed sequences in a chunk file against a reference genome using bowtie
 process bowtie {
+    label 'mga2'
+
     tag "${prefix}.${genome}"
 
     memory { 4.GB * 2 ** (task.attempt - 1) }
@@ -177,6 +185,8 @@ process bowtie {
 
 // align untrimmed sequences in a chunk file against adapter sequences using exonerate
 process exonerate {
+    label 'mga2'
+
     tag "${prefix}.adapters"
 
     memory { 2.GB * task.attempt }
@@ -214,6 +224,8 @@ process exonerate {
 
 // create summary tables and stacked bar chart
 process create_summary {
+    label 'mga2'
+
     publishDir "${params.outputDir}", mode: 'copy'
 
     memory { 2.GB * task.attempt }
