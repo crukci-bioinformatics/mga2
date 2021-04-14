@@ -85,9 +85,8 @@ process check_inputs {
 
 // sample records from input FASTQ file(s)
 process sample_fastq {
-    tag "${id} ${name}"
-
     label 'mga2'
+    tag "${id} ${name}"
 
     time 12.hour
 
@@ -147,7 +146,6 @@ process trim_and_split {
 // align trimmed sequences in a chunk file against a reference genome using bowtie
 process bowtie {
     label 'mga2'
-
     tag "${prefix}.${genome}"
 
     memory { 4.GB * 2 ** (task.attempt - 1) }
@@ -186,7 +184,6 @@ process bowtie {
 // align untrimmed sequences in a chunk file against adapter sequences using exonerate
 process exonerate {
     label 'mga2'
-
     tag "${prefix}.adapters"
 
     memory { 2.GB * task.attempt }
