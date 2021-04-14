@@ -503,7 +503,7 @@ components and tools.
 
 * bowtie 1.3.0 (not bowtie2)
 * exonerate 2.4.0
-* R 4.0.4 or above and the following packages
+* R 4.0.3 or above and the following packages
     * tidyverse
     * optparse
     * svglite
