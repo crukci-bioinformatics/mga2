@@ -41,9 +41,9 @@ and create a genome metadata file named `genomes.csv`
 
 4. Create a configuration file named `mga.config` specifying parameter settings
 
-5. Run MGA specifying the configuration file and, optionally, an execution profile
+5. Run MGA specifying the configuration file and, optionally, a release version and an execution profile
 
-    `nextflow run crukci-bioinformatics/mga2 -c mga.config -profile cluster`
+    `nextflow run crukci-bioinformatics/mga2 -r 2.0.1 -c mga.config -profile cluster`
 
 ---
 
