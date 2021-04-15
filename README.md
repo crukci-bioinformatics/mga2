@@ -266,13 +266,12 @@ create a copy within a reference data directory elsewhere.
 
 ### Using Docker or Singularity
 
-MGA's dependencies are packaged as a
-[Docker image](https://hub.docker.com/r/crukcibioinformatics/mga2) available on
-[Docker Hub](https://hub.docker.com) with the name `crukcibioinformatics/mga2`.
-This can be pulled from Docker Hub using `docker pull` or used to build a
-Singularity image using `singularity build` but Nextflow will automatically do
-this if either the `-with-docker` or `-with-singularity` command line options
-are specified e.g.
+MGA's dependencies are packaged as a Docker image available on
+[Docker Hub](https://hub.docker.com/r/crukcibioinformatics/mga2) with the name
+`crukcibioinformatics/mga2`. This can be pulled from Docker Hub using
+`docker pull` or used to build a Singularity image using `singularity build` but
+Nextflow will automatically do this if either the `-with-docker` or
+`-with-singularity` command line options are specified e.g.
 
     nextflow run crukci-bioinformatics/mga2 -c mga.config -with-docker
 
