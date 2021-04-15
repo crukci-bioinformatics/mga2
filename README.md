@@ -480,16 +480,39 @@ sequence, not the trimmed sequence.
 
 ---
 
+## Installing a specific release of MGA
+
+Using the latest stable [release](https://github.com/crukci-bioinformatics/mga2/releases)
+of MGA is recommended. A specific version of MGA can be installed using
+`nextflow pull` as follows:
+
+    nextflow pull crukci-bioinformatics/mga2 -r 2.0.1
+
+When a specific version of MGA is installed in this way the revision also needs
+to be specified when running the pipeline using `nextflow run`.
+
+    nextflow run crukci-bioinformatics/mga2 -r 2.0.1 -c mga.config -profile myprofile
+
+Run `nextflow info` to view details about the currently installed version.
+
+    nextflow info crukci-bioinformatics/mga2
+
+---
+
 ## Updating MGA
 
-Nextflow detects when there is a more recent version of MGA available and
-display a message to this effect such as the following:
+The latest snapshot of MGA will be downloaded and run if no revision is
+specified using the `-r` or `-revision` command line option when running MGA for
+the first time. Subsequent runs will use this snapshot version but Nextflow
+detects if there have been revisions to MGA since then and displays a message
+such as the following:
 
     NOTE: Your local project version looks outdated - a different revision is available in the remote repository [961d1d72a2]
 
-To update MGA run the following command:
+Run the following command to update MGA to the latest revision on the master
+branch:
 
-    nextflow pull crukci-bioinformatics/mga2
+    nextflow pull crukci-bioinformatics/mga2 -r master
 
 ---
 
