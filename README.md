@@ -37,7 +37,8 @@ facility.
 2. Create a reference data directory and copy or create links to bowtie indexes
 and create a genome metadata file named `genomes.csv`
 
-3. Create a sample sheet named `samplesheet.csv` specifying the FASTQ files for each sample or dataset and the expected species and/or controls
+3. Create a sample sheet named `samplesheet.csv` specifying the FASTQ files for
+each sample or dataset and the expected species and/or controls
 
 4. Create a configuration file named `mga.config` specifying parameter settings
 
@@ -59,6 +60,63 @@ Docker or Singularity. Nextflow requires Java 8 or above and can be installed as
 shown in the Quickstart section above. See the
 [Nextflow documentation](https://www.nextflow.io/docs/latest/index.html) for
 more details.
+
+### Installing a specific release of MGA
+
+Using the latest stable [release](https://github.com/crukci-bioinformatics/mga2/releases)
+of MGA is recommended. A specific version of MGA can be installed using
+`nextflow pull` as follows:
+
+    nextflow pull crukci-bioinformatics/mga2 -r 2.0.1
+
+When a specific version of MGA is installed in this way the revision also needs
+to be specified when running the pipeline using `nextflow run`.
+
+    nextflow run crukci-bioinformatics/mga2 -r 2.0.1 -c mga.config -profile myprofile
+
+Run `nextflow info` to view details about the currently installed version.
+
+    nextflow info crukci-bioinformatics/mga2
+
+### Updating MGA
+
+The latest snapshot of MGA will be downloaded and run if no revision is
+specified using the `-r` or `-revision` command line option when running MGA for
+the first time. Subsequent runs will use this snapshot version but Nextflow
+detects if there have been revisions to MGA since then and displays a message
+such as the following:
+
+    NOTE: Your local project version looks outdated - a different revision is available in the remote repository [961d1d72a2]
+
+Run the following command to update MGA to the latest revision on the master
+branch:
+
+    nextflow pull crukci-bioinformatics/mga2 -r master
+
+### Requirements
+
+* [Nextflow](https://www.nextflow.io) 20.10.0 or above
+* [Singularity](https://sylabs.io/docs) or [Docker](https://www.docker.com)
+
+Dependencies, including bowtie, exonerate, R (tidyverse, optparse and svglite
+packages) and FASTQ sampling and splitting tools, are packaged in a
+[Docker image](https://hub.docker.com/r/crukcibioinformatics/mga2) that will be
+downloaded automatically by Nextflow.
+
+MGA can be run without a container engine by installing the following
+components and tools.
+
+#### Components
+
+* bowtie 1.3.0 (not bowtie2)
+* exonerate 2.4.0
+* R 4.0.3 or above and the following packages
+    * tidyverse
+    * optparse
+    * svglite
+* `sample-fastq` and `trim-and-split-fastq` tools which are written in Rust and
+can be compiled and installed by cloning the GitHub repository and running
+`cargo install`
 
 ---
 
@@ -479,66 +537,3 @@ Note that the adapter matching using exonerate is performed for the full-length
 sequence, not the trimmed sequence.
 
 ---
-
-## Installing a specific release of MGA
-
-Using the latest stable [release](https://github.com/crukci-bioinformatics/mga2/releases)
-of MGA is recommended. A specific version of MGA can be installed using
-`nextflow pull` as follows:
-
-    nextflow pull crukci-bioinformatics/mga2 -r 2.0.1
-
-When a specific version of MGA is installed in this way the revision also needs
-to be specified when running the pipeline using `nextflow run`.
-
-    nextflow run crukci-bioinformatics/mga2 -r 2.0.1 -c mga.config -profile myprofile
-
-Run `nextflow info` to view details about the currently installed version.
-
-    nextflow info crukci-bioinformatics/mga2
-
----
-
-## Updating MGA
-
-The latest snapshot of MGA will be downloaded and run if no revision is
-specified using the `-r` or `-revision` command line option when running MGA for
-the first time. Subsequent runs will use this snapshot version but Nextflow
-detects if there have been revisions to MGA since then and displays a message
-such as the following:
-
-    NOTE: Your local project version looks outdated - a different revision is available in the remote repository [961d1d72a2]
-
-Run the following command to update MGA to the latest revision on the master
-branch:
-
-    nextflow pull crukci-bioinformatics/mga2 -r master
-
----
-
-## Requirements
-
-* [Nextflow](https://www.nextflow.io) 20.10.0 or above
-* [Singularity](https://sylabs.io/docs) or [Docker](https://www.docker.com)
-
-Dependencies, including bowtie, exonerate, R (tidyverse, optparse and svglite
-packages) and FASTQ sampling and splitting tools, are packaged in a
-[Docker image](https://hub.docker.com/r/crukcibioinformatics/mga2) that will be
-downloaded automatically by Nextflow.
-
-MGA can be run without a container engine by installing the following
-components and tools.
-
-## Components
-
-* bowtie 1.3.0 (not bowtie2)
-* exonerate 2.4.0
-* R 4.0.3 or above and the following packages
-    * tidyverse
-    * optparse
-    * svglite
-* `sample-fastq` and `trim-and-split-fastq` tools
-
-The `sample-fastq` and `trim-and-split-fastq` tools are written in Rust and
-can be compiled and installed by cloning this GitHub repository and running
-`cargo install`.
