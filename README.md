@@ -12,7 +12,8 @@ sequence content by limiting the computational effort. Sequence reads are trimme
 to 36 bases by default, prior to alignment to the reference genomes, with the
 aim of minimizing the run time and ensuring consistency of the resulting mapping
 and error rates across sequencing runs with differing read lengths. Full length
-reads are used for matching adapter sequences.
+reads are used for matching adapter sequences to pick up adapter read-through
+for DNA/RNA fragments that are shorter than the read length.
 
 mga2 is a rewrite of the original [MGA](https://github.com/crukci-bioinformatics/MGA)
 in which the workflow has been ported to [Nextflow](https://www.nextflow.io/index.html),
@@ -33,7 +34,7 @@ facility.
 
     `curl -s https://get.nextflow.io | bash`
 
-2. Create reference data directory and copy or create links to bowtie indexes
+2. Create a reference data directory and copy or create links to bowtie indexes
 and create a genome metadata file named `genomes.csv`
 
 3. Create a sample sheet named `samplesheet.csv` specifying the FASTQ files for each sample or dataset and the expected species and/or controls
@@ -49,21 +50,24 @@ and create a genome metadata file named `genomes.csv`
 ## Installing MGA
 
 MGA is downloaded and run using the Nextflow workflow engine. Dependencies,
-including bowtie and exonerate, are packaged as a [Docker](https://www.docker.com)
-container that can be run using either Docker or [Singularity](https://sylabs.io/docs).
-The container is also downloaded by Nextflow. The only requirements are a recent
-version of Nextflow and either Docker or Singularity. Nextflow requires Java 8
-or above and can be installed as shown in the Quickstart section above. See
-the [Nextflow documentation](https://www.nextflow.io/docs/latest/index.html)
-for more details.
+including bowtie and exonerate, are packaged as a
+[Docker container](https://hub.docker.com/r/crukcibioinformatics/mga2)
+that can be run using either [Docker](https://www.docker.com) or
+[Singularity](https://sylabs.io/docs). The container is also downloaded by
+Nextflow. The only requirements are a recent version of Nextflow and either
+Docker or Singularity. Nextflow requires Java 8 or above and can be installed as
+shown in the Quickstart section above. See the
+[Nextflow documentation](https://www.nextflow.io/docs/latest/index.html) for
+more details.
 
 ---
 
 ## Configuring MGA
 
 MGA requires a sample sheet file, a set of reference genomes indexed for bowtie,
-a file providing some details about these genomes and a file containing a set of
-adapter sequences. The adapters file used by default is provided by MGA.
+a metadata file providing some details about these genomes and a FASTA file
+containing a set of adapter sequences. The adapters file used by default is
+provided by MGA.
 
 ### Sample sheet
 
@@ -146,11 +150,11 @@ parameter             | default value   | description
 sampleSheet           | samplesheet.csv | CSV file containing details of sample dataset (id, fastq, species and control columns required)
 fastqDir              |                 | Directory in which FASTQ files are located (optional, can specify absolute or relative paths in sample sheet instead)
 sampleSize            |          100000 | Number of sequences to sample for each sample/dataset
-maxNumberToSampleFrom |     10000000000 | Maximum number of sequences to read/sample from
-chunkSize             |         1000000 | Number of sequences for each chunk for batch alignment of sampled sequences
+maxNumberToSampleFrom |  Long.MAX_VALUE | Maximum number of sequences to read/sample from
+chunkSize             |         1000000 | Number of sequences in each chunk for batch alignment of sampled sequences
 trimStart             |               1 | The position at which the trimmed sequence starts, all bases before this position are trimmed
 trimLength            |              36 | The length of the trimmed sequences
-genomeDetails         | ${projectDir}/resources/genomes.csv | CSV file containing the species name and synonyms for each reference genome (genome, species and synonym colums required)
+genomeDetails         | ${projectDir}/resources/genomes.csv | CSV file containing the species name and synonyms for each reference genome
 bowtieIndexDir        | bowtie_indexes  | Directory containing bowtie indexes for reference genomes
 adaptersFasta         | ${projectDir}/resources/adapters.fa | FASTA file containing adapter sequences
 outputDir             | ${launchDir}    | Directory to which output files are written
