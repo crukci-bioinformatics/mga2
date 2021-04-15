@@ -266,7 +266,8 @@ create a copy within a reference data directory elsewhere.
 
 ### Using Docker or Singularity
 
-MGA's dependencies are packaged as a Docker image available on
+MGA's dependencies are packaged as a
+[Docker image](https://hub.docker.com/r/crukcibioinformatics/mga2) available on
 [Docker Hub](https://hub.docker.com) with the name `crukcibioinformatics/mga2`.
 This can be pulled from Docker Hub using `docker pull` or used to build a
 Singularity image using `singularity build` but Nextflow will automatically do
@@ -346,7 +347,9 @@ these reports when running MGA, e.g.
 Nextflow logs information to a hidden file named `.nextflow.log` in the launch
 directory in which MGA is run. This can contain useful informations that can
 help with debugging problems with running MGA. It will, for example, show which
-task(s) failed and the directory in which that task was run.
+task(s) failed and the directory in which that task was run. An alternative log
+file name can be specified using the `-log` command line argument (run
+`nextflow help` for more details on Nextflow command line options).
 
 Nextflow runs each task within its own directory. These directories are created
 under a directory named `work`. Each task run directory contains hidden files
@@ -355,7 +358,7 @@ debugging Nextflow pipelines.
 
 The work directories contain intermediate files produced when running MGA. The
 final outputs are written either to the launch directory or the directory
-specified using `--outputDir` or the `outputDir` parameter. The `work` directory
+specified using the `--outputDir` command line option or the `outputDir` parameter. The `work` directory
 can be deleted on successful completion of the MGA pipeline unless other
 Nextflow pipelines are also being run from the launch directory.
 
@@ -374,13 +377,13 @@ mga_genome_alignments.tsv.gz  | Table containing alignments with the fewest mism
 mga_adapter_alignments.tsv.gz | Table containing adapter matches for each of the sampled sequences
 
 The directory to which these files are written can be configured using the
-`--outputDir` command line option or the `outputDir` parameter if using a config
-file.
+`--outputDir` command line option or setting the `outputDir` parameter if using
+a config file.
 
 Additionally, it is possible to set a prefix for the file names using the
-`--outputPrefix` command line option or the `outputPrefix` parameter. This
-might be useful for prepending an identifier for the run or flow cell to the
-output file names, e.g.
+`--outputPrefix` command line option or the `outputPrefix` parameter in the
+config file. This might be useful for prepending an identifier for the run or
+flow cell to the output file names, e.g.
 
     nextflow run crukci-bioinformatics/mga2 --outputPrefix="H3MTJDRXY"
 
@@ -497,8 +500,9 @@ To update MGA run the following command:
 * [Singularity](https://sylabs.io/docs) or [Docker](https://www.docker.com)
 
 Dependencies, including bowtie, exonerate, R (tidyverse, optparse and svglite
-packages) and FASTQ sampling and splitting tools, are packaged in a docker
-image that will be downloaded automatically by Nextflow.
+packages) and FASTQ sampling and splitting tools, are packaged in a
+[Docker image](https://hub.docker.com/r/crukcibioinformatics/mga2) that will be
+downloaded automatically by Nextflow.
 
 MGA can be run without a container engine by installing the following
 components and tools.
