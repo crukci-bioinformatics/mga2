@@ -1,7 +1,7 @@
 FROM rust:1.51-slim-buster
 
 LABEL authors="Matt Eldridge" \
-      version="2.0.0" \
+      version="2.0.1" \
       description="Multi-Genome Analysis (MGA) contaminant screen for genomic sequence data"
 
 RUN apt-get update && \
@@ -26,7 +26,7 @@ ENV PATH /opt/conda/envs/mga2/bin:$PATH
 # ensures that a new build is run if commits have been made since the last build
 ADD "https://api.github.com/repos/crukci-bioinformatics/mga2/commits?per_page=1" /opt/mga2/.latest_commit
 
-ARG VERSION=2.0.0
+ARG VERSION=2.0.1
 
 RUN git clone --branch ${VERSION} --depth 1 https://github.com/crukci-bioinformatics/mga2 /opt/mga2/build && \
     cargo install --path /opt/mga2/build
