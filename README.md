@@ -535,5 +535,3 @@ each sample separately.
 
 Note that the adapter matching using exonerate is performed for the full-length
 sequence, not the trimmed sequence.
-
----
