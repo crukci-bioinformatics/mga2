@@ -1,6 +1,6 @@
 # mga2
 
-## [2.0.0](https://github.com/crukci-bioinformatics/mga2/releases/tag/2.0.0) (TBC)
+## [2.0.0](https://github.com/crukci-bioinformatics/mga2/releases/tag/2.0.0) (2021-04-15)
 
 Initial release of a rewrite of the [MGA](https://github.com/crukci-bioinformatics/MGA)
 contaminant screen for high-throughput sequencing data.
