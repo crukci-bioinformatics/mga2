@@ -1,5 +1,11 @@
 # mga2
 
+## [2.0.1](https://github.com/crukci-bioinformatics/mga2/releases/tag/2.0.1) (2021-04-15)
+
+### Fixed
+
+* Added version tag for container in `nextflow.config`
+
 ## [2.0.0](https://github.com/crukci-bioinformatics/mga2/releases/tag/2.0.0) (2021-04-15)
 
 Initial release of a rewrite of the [MGA](https://github.com/crukci-bioinformatics/MGA)
