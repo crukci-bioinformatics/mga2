@@ -165,7 +165,7 @@ process bowtie {
         alignments = "${prefix}.${genome}.tsv"
         """
         set -o pipefail
-        echo "genome	read	strand	chromosome	position	sequence	quality	num	mismatches" > ${prefix}.${genome}.tsv
+        echo -e "genome\tread\tstrand\tchromosome\tposition\tsequence\tquality\tnum\tmismatches" > ${prefix}.${genome}.tsv
         if [[ `head ${fastq} | wc -l` -gt 0 ]]
         then
             bowtie \
@@ -201,7 +201,7 @@ process exonerate {
         prefix = fasta.baseName
         alignments = "${prefix}.adapter_alignments.tsv"
         """
-        echo "read	start	end	strand	adapter	adapter start	adapter end	adapter strand	percent identity	score" > ${alignments}
+        echo -e "read\tstart\tend\tstrand\tadapter\tadapter start\tadapter end\tadapter strand\tpercent identity\tscore" > ${alignments}
         if [[ `head ${fasta} | wc -l` -gt 0 ]]
         then
             exonerate \
