@@ -91,7 +91,7 @@ process sample_fastq {
     time 12.hour
 
     input:
-        tuple val(id), val(name), path(fastq), val(fastq_pattern)
+        tuple val(id), val(name), path(fastq)
 
     output:
         path sampled_fastq, emit: fastq
@@ -293,6 +293,8 @@ workflow {
         .map { row -> tuple("${row.id}", "${row.name}", file("${fastqDir}${row.fastq}", checkIfExists: true), "${fastqDir}${row.fastq}") }
 
     fastq.subscribe { assert !it[2].isEmpty(), "No FASTQ files found for ${it[1]} matching pattern ${it[3]}" }
+
+    fastq = fastq.map { it[0..2] }
 
     sample_fastq(fastq)
 
