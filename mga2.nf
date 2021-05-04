@@ -304,7 +304,7 @@ workflow {
     bowtie(
         trim_and_split.out.fastq,
         bowtie_index_dir,
-        genomes
+        genomes.collect()
     )
 
     alignments = bowtie.out.collectFile(name: "alignments.collected.tsv", keepHeader: true)
