@@ -91,7 +91,7 @@ process sample_fastq {
     time 12.hour
 
     input:
-        tuple val(id), val(name), path(fastq), val(fastq_pattern)
+        tuple val(id), val(name), path(fastq)
 
     output:
         path sampled_fastq, emit: fastq
@@ -165,7 +165,7 @@ process bowtie {
         alignments = "${prefix}.${genome}.tsv"
         """
         set -o pipefail
-        echo "genome	read	strand	chromosome	position	sequence	quality	num	mismatches" > ${prefix}.${genome}.tsv
+        echo -e "genome\\tread\\tstrand\\tchromosome\\tposition\\tsequence\\tquality\\tnum\\tmismatches" > ${prefix}.${genome}.tsv
         if [[ `head ${fastq} | wc -l` -gt 0 ]]
         then
             bowtie \
@@ -201,7 +201,7 @@ process exonerate {
         prefix = fasta.baseName
         alignments = "${prefix}.adapter_alignments.tsv"
         """
-        echo "read	start	end	strand	adapter	adapter start	adapter end	adapter strand	percent identity	score" > ${alignments}
+        echo -e "read\\tstart\\tend\\tstrand\\tadapter\\tadapter start\\tadapter end\\tadapter strand\\tpercent identity\\tscore" > ${alignments}
         if [[ `head ${fasta} | wc -l` -gt 0 ]]
         then
             exonerate \
@@ -210,7 +210,7 @@ process exonerate {
                 --showvulgar no \
                 --verbose 0 \
                 --bestn 1 \
-                --ryo "%qi\t%qab\t%qae\t%qS\t%ti\t%tab\t%tae\t%tS\t%pi\t%s\n" \
+                --ryo "%qi\\t%qab\\t%qae\\t%qS\\t%ti\\t%tab\\t%tae\\t%tS\\t%pi\\t%s\\n" \
                 ${fasta} \
                 ${adapters_fasta} \
             >> ${alignments}
@@ -294,7 +294,7 @@ workflow {
 
     fastq.subscribe { assert !it[2].isEmpty(), "No FASTQ files found for ${it[1]} matching pattern ${it[3]}" }
 
-    sample_fastq(fastq)
+    sample_fastq(fastq.map { it[0..2] })
 
     counts = sample_fastq.out.summary
         .collectFile(name: "sequence_counts.collected.csv", keepHeader: true)
@@ -304,7 +304,7 @@ workflow {
     bowtie(
         trim_and_split.out.fastq,
         bowtie_index_dir,
-        genomes
+        genomes.collect()
     )
 
     alignments = bowtie.out.collectFile(name: "alignments.collected.tsv", keepHeader: true)
