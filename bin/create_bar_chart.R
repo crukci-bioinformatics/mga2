@@ -1,8 +1,14 @@
 #!/usr/bin/env Rscript
 
-options(bitmapType='cairo')
+# Copyright (c) 2021 CRUK Cambridge Institute - Bioinformatics Core
 
-# create stacked bar chart plot
+# Licensed under the MIT license (http://opensource.org/licenses/MIT).
+# This file may not be copied, modified, or distributed except according
+# to those terms.
+
+# Create stacked bar chart plot.
+
+options(bitmapType='cairo')
 
 suppressPackageStartupMessages(library(optparse))
 
@@ -136,3 +142,4 @@ height <- 0.7 * (1.5 + nrow(sample_names))
 ggsave(str_c(output_plot_file_prefix, ".png"), plot, width = width, height = height)
 ggsave(str_c(output_plot_file_prefix, ".pdf"), plot, width = width, height = height)
 ggsave(str_c(output_plot_file_prefix, ".svg"), plot, width = width, height = height)
+

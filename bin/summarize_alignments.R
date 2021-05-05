@@ -1,6 +1,13 @@
 #!/usr/bin/env Rscript
 
-# create alignment summaries
+# Copyright (c) 2021 CRUK Cambridge Institute - Bioinformatics Core
+
+# Licensed under the MIT license (http://opensource.org/licenses/MIT).
+# This file may not be copied, modified, or distributed except according
+# to those terms.
+
+# Summarize alignments to reference genomes and adapter matches into
+# final output tables.
 
 suppressPackageStartupMessages(library(optparse))
 
@@ -433,3 +440,4 @@ alignment_summary %>%
   rename(id = name) %>%
   mutate(across(where(is.logical), ifelse, "yes", "no")) %>%
   write_csv(output_alignment_summary_file, na = "")
+
