@@ -31,11 +31,7 @@ option_list <- list(
 )
 
 option_parser <- OptionParser(usage = "usage: %prog [options]", option_list = option_list, add_help_option = TRUE)
-
-args <- commandArgs(trailingOnly = TRUE)
-if (length(args) == 0) args <- "--help"
-
-opt <- parse_args(option_parser, args)
+opt <- parse_args(option_parser)
 
 samples_file <- opt$samples_file
 genome_details_file <- opt$genome_details_file
