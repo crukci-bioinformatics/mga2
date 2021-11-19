@@ -397,12 +397,12 @@ execution time and memory used by each task, and a timeline chart.
 Use the `-with-report` and `-with-timeline` command line options to produce
 these reports when running MGA, e.g.
 
-     nextflow run crukci-bioinformatics/mga2 -c mga.config -with-report mga.report.html --with-timeline mga.timeline.html
+     nextflow run crukci-bioinformatics/mga2 -c mga.config -with-report mga.report.html -with-timeline mga.timeline.html
 
 ### Nextflow log files and work directories
 
 Nextflow logs information to a hidden file named `.nextflow.log` in the launch
-directory in which MGA is run. This can contain useful informations that can
+directory in which MGA is run. This can contain useful information that can
 help with debugging problems with running MGA. It will, for example, show which
 task(s) failed and the directory in which that task was run. An alternative log
 file name can be specified using the `-log` command line argument (run
