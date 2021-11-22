@@ -365,17 +365,19 @@ A custom profile can be created in the configuration file, e.g. `mga.config`,
 an example of which is shown below.
 
     // within mga.config
-    myprofile {
-        process {
-            executor = 'slurm'
-            queue = 'long'
+    profiles {
+        myprofile {
+            process {
+                executor = 'slurm'
+                queue = 'long'
+            }
+            executor {
+                queueSize = 25
+                pollInterval = 30.sec
+                jobName = { "'$task.name'" }
+            }
+            singularity.enabled = true
         }
-        executor {
-            queueSize = 25
-            pollInterval = 30.sec
-            jobName = { "'$task.name'" }
-        }
-        singularity.enabled = true
     }
 
 This profile can be specified using the `-profile` command line option.
