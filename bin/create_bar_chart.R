@@ -35,12 +35,19 @@ if (is.null(alignment_summary_file)) stop("Alignment summary file must be specif
 
 if (is.null(output_prefix)) output_prefix <- ""
 
-suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages({
+  library(readr)
+  library(stringr)
+  library(forcats)
+  library(tidyr)
+  library(dplyr)
+  library(ggplot2)
+})
 
 output_plot_file_prefix <- str_c(output_prefix, "mga_alignment_summary")
 
 # genome alignment summaries
-alignment_summary <- read_csv(alignment_summary_file)
+alignment_summary <- read_csv(alignment_summary_file, show_col_types = FALSE)
 
 required_columns <- c("id", "genome", "expected", "control", "assigned", "assigned error rate")
 missing_columns <- setdiff(required_columns, colnames(alignment_summary))
@@ -63,7 +70,7 @@ alignment_summary <- alignment_summary %>%
   select(id, everything())
 
 # data set summaries
-summary <- read_csv(summary_file)
+summary <- read_csv(summary_file, show_col_types = FALSE)
 
 required_columns <- c("id", "sequences", "sampled", "adapter")
 missing_columns <- setdiff(required_columns, colnames(summary))

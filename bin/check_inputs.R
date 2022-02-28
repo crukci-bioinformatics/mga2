@@ -45,7 +45,12 @@ if (is.null(bowtie_index_list_file)) stop("Bowtie index path list file must be s
 if (is.null(output_samples_file)) stop("Output sample sheet file must be specified")
 if (is.null(output_genomes_file)) stop("Output genome details file must be specified")
 
-suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages({
+  library(readr)
+  library(stringr)
+  library(tidyr)
+  library(dplyr)
+})
 
 # read sample sheet
 samples <- read_csv(samples_file, col_types = cols(.default = col_character()))

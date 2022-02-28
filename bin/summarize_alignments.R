@@ -50,7 +50,12 @@ if (is.null(adapter_alignments_file)) stop("Adapter alignments file must be spec
 
 if (is.null(output_prefix)) output_prefix <- ""
 
-suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages({
+  library(readr)
+  library(stringr)
+  library(tidyr)
+  library(dplyr)
+})
 
 output_summary_file <- str_c(output_prefix, "mga_summary.csv")
 output_alignments_file <- str_c(output_prefix, "mga_genome_alignments.tsv.gz")
