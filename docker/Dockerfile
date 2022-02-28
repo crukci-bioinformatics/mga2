@@ -8,8 +8,8 @@ RUN apt-get update && \
     apt-get install -y git curl procps && \
     apt-get clean
 
-ARG CONDA_VERSION=py38_4.9.2
-ARG CONDA_MD5=122c8c9beb51e124ab32a0fa6426c656
+ARG CONDA_VERSION=py39_4.11.0
+ARG CONDA_MD5=4e2f31e0b2598634c80daa12e4981647
 
 RUN curl https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-x86_64.sh -o miniconda3.sh && \
     echo "${CONDA_MD5}  miniconda3.sh" > miniconda3.md5 && \
