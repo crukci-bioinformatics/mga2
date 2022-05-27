@@ -21,13 +21,13 @@ COPY conda.yml .
 
 RUN /opt/conda/bin/conda env create -f conda.yml && /opt/conda/bin/conda clean -a
 
-ENV PATH /opt/conda/envs/mga2/bin:$PATH
+ENV PATH /opt/mga2/bin:/opt/conda/envs/mga2/bin:$PATH
 
 # ensures that a new build is run if commits have been made since the last build
-ADD "https://api.github.com/repos/crukci-bioinformatics/mga2/commits?per_page=1" /opt/mga2/.latest_commit
+ADD "https://api.github.com/repos/crukci-bioinformatics/mga2/commits?per_page=1" /opt/.latest_mga_commit
 
 ARG VERSION=master
 
-RUN git clone --branch ${VERSION} --depth 1 https://github.com/crukci-bioinformatics/mga2 /opt/mga2/build && \
-    cargo install --path /opt/mga2/build
+RUN git clone --branch ${VERSION} --depth 1 https://github.com/crukci-bioinformatics/mga2 /opt/mga2 && \
+    cargo install --path /opt/mga2 --root /opt/mga2
 
