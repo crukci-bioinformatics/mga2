@@ -94,7 +94,7 @@ plot_data <- alignment_summary %>%
   filter(count > 0) %>%
   mutate(category = ifelse(expected, "expected species", "unexpected/contaminant")) %>%
   mutate(category = ifelse(control, "control", category)) %>%
-  mutate(category = replace_na(category, "unmapped")) %>%
+  mutate(category = replace_na(as.character(category), "unmapped")) %>%  # category will be logical if there are no rows with non-zero counts
   select(-expected, -control) %>%
   mutate(type = "genome") %>%
   bind_rows(transmute(summary, id, name, reference = "adapter", count = adapter, error_rate = lower_error_rate, category = "adapter", type = "adapter")) %>%
