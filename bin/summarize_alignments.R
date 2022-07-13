@@ -70,61 +70,47 @@ options(scipen = 999)
 # -------
 
 message("Reading sample information")
-samples <- read_csv(samples_file, col_types = cols(.default = col_character()))
-
-if (nrow(samples) == 0) {
-  stop("empty sample sheet: ", samples_file)
-}
-
-expected_columns <- c("id", "name", "fastq", "species", "controls", "genomes", "control_genomes")
-missing_columns <- setdiff(expected_columns, colnames(samples))
-if (length(missing_columns) > 0) {
-  stop("missing columns in ", samples_file, " (", str_c(missing_columns, collapse = ", "), ")")
-}
-samples <- samples %>%
-  select(all_of(expected_columns)) %>%
-  mutate(id = as.integer(id)) %>%
-  arrange(id)
-
-if (nrow(filter(samples, is.na(id))) > 0 || nrow(filter(samples, is.na(name))) > 0) {
-  stop("missing sample identifiers in ", samples_file)
-}
-
-sample_ids <- 1:nrow(samples)
-if (!all(samples$id == sample_ids)) {
-  stop("unexpected sample identifiers in ", samples_file)
-}
-
+samples <- read_csv(
+  samples_file,
+  col_types = cols_only(
+    id = col_integer(),
+    name = col_character(),
+    fastq = col_character(),
+    species = col_character(),
+    controls = col_character(),
+    genomes = col_character(),
+    control_genomes = col_character()
+  )
+)
 
 # genomes
 # -------
 
 # read genomes that have been aligned to
 message("Reading genome details")
-genomes <- read_csv(genomes_file, col_types = cols(.default = col_character()))
-
-expected_columns <- c("genome", "species")
-missing_columns <- setdiff(expected_columns, colnames(genomes))
-if (length(missing_columns) > 0) {
-  stop("missing columns in ", genomes_file, " (", str_c(missing_columns, collapse = ", "), ")")
-}
-genomes <- select(genomes, all_of(expected_columns))
-
+genomes <- read_csv(
+  genomes_file,
+  col_types = cols_only(
+    genome = col_character(),
+    species = col_character()
+  )
+)
 
 # sequence and sample counts
 # --------------------------
 
 # read sequence counts summary from FASTQ sampling
 message("Reading sequence counts from sampling")
-counts <- read_csv(counts_file, col_types = "inn")
+counts <- read_csv(
+  counts_file,
+  col_types = cols_only(
+    id = col_integer(),
+    read = col_double(),
+    sampled = col_double()
+  )
+)
 
-expected_columns <- c("id", "read", "sampled")
-missing_columns <- setdiff(expected_columns, colnames(counts))
-if (length(missing_columns) > 0) {
-  stop("missing columns in ", counts_file, " (", str_c(missing_columns, collapse = ", "), ")")
-}
-
-counts <- select(counts, id, sequences = read, sampled)
+counts <- rename(counts, sequences = read)
 
 samples <- left_join(samples, counts, by = "id")
 missing_counts <- samples %>%
@@ -149,42 +135,69 @@ sample_alignment_filename <- function(id) str_c("alignments.", id, ".tsv")
 
 message("Reading/sorting adapter alignments")
 
-adapter_alignment_columns <- c("read", "start", "end", "strand", "adapter", "adapter start", "adapter end", "adapter strand", "percent identity", "score")
-for (sample_id in sample_ids) {
-  write(str_c(c("id", adapter_alignment_columns), collapse = "\t"), sample_alignment_filename(sample_id))
+adapter_alignment_columns <- list(
+  read = col_character(),
+  start = col_integer(),
+  end = col_integer(),
+  strand = col_character(),
+  adapter = col_character(),
+  `adapter start` = col_integer(),
+  `adapter end` = col_integer(),
+  `adapter strand` = col_character(),
+  `percent identity` = col_double(),
+  score = col_integer()
+)
+
+for (sample_id in samples$id) {
+  write(
+    str_c(c("id", names(adapter_alignment_columns)), collapse = "\t"),
+    sample_alignment_filename(sample_id)
+  )
 }
 
 # read adapter alignments in chunks and sort into separate files for each sample
 # to limit memory requirements
 sort_adapters <- function(alignments, pos) {
-  missing_columns <- setdiff(adapter_alignment_columns, colnames(alignments))
-  if (length(missing_columns) > 0) {
-    stop("Missing columns in ", adapter_alignments_file, " (", str_c(missing_columns, collapse = ", "), ")")
-  }
-
   alignments <- alignments %>%
     separate(read, into = c("id", "read"), sep = "\\|", extra = "merge") %>%
-    select(id, all_of(adapter_alignment_columns))
+    select(id, all_of(names(adapter_alignment_columns)))
 
-  for (sample_id in sample_ids) {
+  for (sample_id in samples$id) {
     alignments %>%
       filter(id == sample_id) %>%
       write_tsv(sample_alignment_filename(sample_id), na = "", append = TRUE)
   }
 }
 
-result <- read_tsv_chunked(adapter_alignments_file, SideEffectChunkCallback$new(sort_adapters), col_types = "ciicciicdi", chunk_size = 250000)
+result <- read_tsv_chunked(
+  adapter_alignments_file,
+  SideEffectChunkCallback$new(sort_adapters),
+  col_types = adapter_alignment_columns,
+  chunk_size = 250000
+)
 
 # summarize adapter alignments for each sample
 message("Summarizing adapter alignments")
 
-adapter_counts <- tibble(id = integer(), count = integer(), percentage = double())
+adapter_counts <- tibble(
+  id = integer(),
+  count = integer(),
+  percentage = double()
+)
+
 first <- TRUE
 
-for (sample_id in sample_ids) {
+for (sample_id in samples$id) {
   alignment_file <- sample_alignment_filename(sample_id)
 
-  alignments <- read_tsv(alignment_file, col_types = "iciicciicdi")
+  alignments <- read_tsv(
+    alignment_file,
+    col_types = c(
+      list(id = col_integer()),
+      adapter_alignment_columns
+    )
+  )
+
   alignments <- left_join(alignments, samples, by = "id")
 
   count <- alignments %>%
@@ -199,7 +212,7 @@ for (sample_id in sample_ids) {
   adapter_counts <- bind_rows(adapter_counts, sample_adapter_counts)
 
   alignments %>%
-    select(id = name, all_of(adapter_alignment_columns)) %>%
+    select(id = name, all_of(names(adapter_alignment_columns))) %>%
     write_tsv(output_adapter_alignments_file, na = "", append = !first)
 
   file.remove(alignment_file)
@@ -214,9 +227,22 @@ for (sample_id in sample_ids) {
 # read bowtie alignment output
 message("Reading/sorting genome alignments")
 
-alignment_columns <- c("read", "genome", "chromosome", "position", "strand", "sequence", "quality", "mismatches")
-for (sample_id in sample_ids) {
-  write(str_c(c("id", alignment_columns), collapse = "\t"), sample_alignment_filename(sample_id))
+alignment_columns <- list(
+  read = col_character(),
+  genome = col_character(),
+  chromosome = col_character(),
+  position = col_double(),
+  strand = col_character(),
+  sequence = col_character(),
+  quality = col_character(),
+  mismatches = col_character()
+)
+
+for (sample_id in samples$id) {
+  write(
+    str_c(c("id", names(alignment_columns)), collapse = "\t"),
+    sample_alignment_filename(sample_id)
+  )
 }
 
 # read alignments in chunks and sort into separate files for each sample
@@ -224,23 +250,23 @@ for (sample_id in sample_ids) {
 sort_alignments <- function(alignments, pos) {
   if (pos > 1) message(pos - 1)
 
-  missing_columns <- setdiff(alignment_columns, colnames(alignments))
-  if (length(missing_columns) > 0) {
-    stop("Missing columns in ", alignments_file, " (", str_c(missing_columns, collapse = ", "), ")")
-  }
-
   alignments <- alignments %>%
     separate(read, into = c("id", "read"), sep = "\\|", extra = "merge") %>%
-    select(id, all_of(alignment_columns))
+    select(id, all_of(names(alignment_columns)))
 
-  for (sample_id in sample_ids) {
+  for (sample_id in samples$id) {
     alignments %>%
       filter(id == sample_id) %>%
       write_tsv(sample_alignment_filename(sample_id), na = "", append = TRUE)
   }
 }
 
-result <- read_tsv_chunked(alignments_file, SideEffectChunkCallback$new(sort_alignments), col_types = "ccccnccic", chunk_size = 250000)
+result <- read_tsv_chunked(
+  alignments_file,
+  SideEffectChunkCallback$new(sort_alignments),
+  col_types = alignment_columns,
+  chunk_size = 250000
+)
 
 # summarize alignments for each sample
 
@@ -260,20 +286,51 @@ expected_genomes <- expected_genomes %>%
 
 control_genomes <- mutate(control_genomes, control = TRUE)
 
-aligned_summary <- tibble(id = integer(), genome = character(), count = integer(), percentage = double(), error_rate = double())
-assigned_summary <- tibble(id = integer(), genome = character(), count = integer(), percentage = double(), error_rate = double())
-expected_summary <- tibble(id = integer(), count = integer(), percentage = double(), error_rate = double())
-control_summary <- tibble(id = integer(), count = integer(), percentage = double(), error_rate = double())
+aligned_summary <- tibble(
+  id = integer(),
+  genome = character(),
+  count = integer(),
+  percentage = double(),
+  error_rate = double()
+)
+assigned_summary <- tibble(
+  id = integer(),
+  genome = character(),
+  count = integer(),
+  percentage = double(),
+  error_rate = double()
+)
+expected_summary <- tibble(
+  id = integer(),
+  count = integer(),
+  percentage = double(),
+  error_rate = double()
+)
+control_summary <- tibble(
+  id = integer(),
+  count = integer(),
+  percentage = double(),
+  error_rate = double()
+)
 
 first <- TRUE
 
-for (sample_id in sample_ids) {
+for (sample_id in samples$id) {
   sample <- filter(samples, id == sample_id) %>% pull(name)
-  message("Summarizing alignments for ", sample, " (", sample_id, "/", nrow(samples), ")")
+  message(
+    "Summarizing alignments for ", sample,
+    " (", sample_id, "/", nrow(samples), ")"
+  )
 
   alignment_file <- sample_alignment_filename(sample_id)
 
-  alignments <- read_tsv(alignment_file, col_types = "icccncccc")
+  alignments <- read_tsv(
+    alignment_file,
+    col_types = c(
+      list(id = col_integer()),
+      alignment_columns
+    )
+  )
 
   # calculate sequence lengths and count mismatches
   alignments <- alignments %>%
@@ -294,7 +351,11 @@ for (sample_id in sample_ids) {
     group_by(read) %>%
     slice_min(mismatches, n = 1, with_ties = FALSE) %>%
     ungroup() %>%
-    summarize(count = n(), error_rate = round(100 * sum(mismatches) / sum(length), digits = 2), .groups = "drop") %>%
+    summarize(
+      count = n(),
+      error_rate = round(100 * sum(mismatches) / sum(length), digits = 2),
+      .groups = "drop"
+    ) %>%
     mutate(error_rate = ifelse(count == 0, NA, error_rate)) %>%
     mutate(id = sample_id) %>%
     left_join(sampled_counts, by = "id") %>%
@@ -308,7 +369,11 @@ for (sample_id in sample_ids) {
     group_by(read) %>%
     slice_min(mismatches, n = 1, with_ties = FALSE) %>%
     ungroup() %>%
-    summarize(count = n(), error_rate = round(100 * sum(mismatches) / sum(length), digits = 2), .groups = "drop") %>%
+    summarize(
+      count = n(),
+      error_rate = round(100 * sum(mismatches) / sum(length), digits = 2),
+      .groups = "drop"
+    ) %>%
     mutate(error_rate = ifelse(count == 0, NA, error_rate)) %>%
     mutate(id = sample_id) %>%
     left_join(sampled_counts, by = "id") %>%
@@ -319,7 +384,11 @@ for (sample_id in sample_ids) {
   # add to aligned reads summary
   summary <- alignments %>%
     group_by(genome) %>%
-    summarize(count = n(), error_rate = round(100 * sum(mismatches) / sum(length), digits = 2), .groups = "drop") %>%
+    summarize(
+      count = n(),
+      error_rate = round(100 * sum(mismatches) / sum(length), digits = 2),
+      .groups = "drop"
+    ) %>%
     mutate(genome = factor(genome, levels = genomes$genome)) %>%
     complete(genome) %>%
     mutate(genome = as.character(genome)) %>%
@@ -356,7 +425,11 @@ for (sample_id in sample_ids) {
   summary <- alignments %>%
     filter(assigned) %>%
     group_by(genome) %>%
-    summarize(count = n(), error_rate = round(100 * sum(mismatches) / sum(length), digits = 2), .groups = "drop") %>%
+    summarize(
+      count = n(),
+      error_rate = round(100 * sum(mismatches) / sum(length), digits = 2),
+      .groups = "drop"
+    ) %>%
     mutate(genome = factor(genome, levels = genomes$genome)) %>%
     complete(genome) %>%
     mutate(genome = as.character(genome)) %>%
@@ -372,7 +445,19 @@ for (sample_id in sample_ids) {
     mutate(across(where(is.logical), ifelse, "yes", "no")) %>%
     left_join(sample_names, by = "id") %>%
     arrange(id, read, genome) %>%
-    select(id = name, read, genome, chromosome, position, strand, sequence, quality, mismatches, expected, control, assigned) %>%
+    select(
+      id = name,
+      read,
+      genome,
+      chromosome,
+      position,
+      strand,
+      sequence,
+      quality,
+      mismatches,
+      expected,
+      control,
+      assigned) %>%
     write_tsv(output_alignments_file, na = "", append = !first)
 
   file.remove(alignment_file)
@@ -400,9 +485,17 @@ unmapped_summary <- assigned_summary %>%
 # general summary with one row per sample/dataset
 summary <- samples %>%
   left_join(expected_summary, by = "id") %>%
-  rename(`genome aligned` = count, `genome aligned %` = percentage, `genome error rate` = error_rate) %>%
+  rename(
+    `genome aligned` = count,
+    `genome aligned %` = percentage,
+    `genome error rate` = error_rate
+  ) %>%
   left_join(control_summary, by = "id") %>%
-  rename(`control aligned` = count, `control aligned %` = percentage, `control error rate` = error_rate) %>%
+  rename(
+    `control aligned` = count,
+    `control aligned %` = percentage,
+    `control error rate` = error_rate
+  ) %>%
   left_join(unmapped_summary, by = "id") %>%
   rename(unmapped = count, `unmapped %` = percentage) %>%
   left_join(adapter_counts, by = "id") %>%
@@ -417,9 +510,17 @@ summary %>%
 # genome alignment summary
 alignment_summary <- sample_names %>%
   left_join(aligned_summary, by = "id") %>%
-  rename(aligned = count, `aligned %` = percentage, `error rate` = error_rate) %>%
+  rename(
+    aligned = count,
+    `aligned %` = percentage,
+    `error rate` = error_rate
+  ) %>%
   left_join(assigned_summary, by = c("id", "genome")) %>%
-  rename(assigned = count, `assigned %` = percentage, `assigned error rate` = error_rate) %>%
+  rename(
+    assigned = count,
+    `assigned %` = percentage,
+    `assigned error rate` = error_rate
+  ) %>%
   left_join(genomes, by = "genome") %>%
   left_join(expected_genomes, by = c("id", "genome")) %>%
   mutate(expected = replace_na(expected, FALSE)) %>%
@@ -430,7 +531,15 @@ alignment_summary <- sample_names %>%
 unmapped_rows <- sample_names %>%
   left_join(unmapped_summary, by = "id") %>%
   mutate(genome = "unmapped") %>%
-  select(id, name, genome, aligned = count, `aligned %` = percentage, assigned = count, `assigned %` = percentage)
+  select(
+    id,
+    name,
+    genome,
+    aligned = count,
+    `aligned %` = percentage,
+    assigned = count,
+    `assigned %` = percentage
+  )
 
 alignment_summary <- alignment_summary %>%
   bind_rows(unmapped_rows) %>%
@@ -441,4 +550,3 @@ alignment_summary %>%
   rename(id = name) %>%
   mutate(across(where(is.logical), ifelse, "yes", "no")) %>%
   write_csv(output_alignment_summary_file, na = "")
-
