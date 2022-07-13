@@ -77,6 +77,13 @@ if (length(duplicates) > 0) {
   stop("duplicate ids found in ", samples_file, ": '", str_c(duplicates, collapse = "', '"), "'")
 }
 
+# remove extraneous columns, rename id column and add new numeric id column
+samples <- samples %>%
+  select(all_of(expected_columns)) %>%
+  rename(name = id) %>%
+  mutate(id = row_number()) %>%
+  select(id, everything())
+
 # read list of genomes with bowtie indexes
 bowtie_indexes <- read_tsv(bowtie_index_list_file, col_names = "id", col_types = "c") %>%
   mutate(id_lower_case = str_to_lower(id))
@@ -97,12 +104,6 @@ duplicates <- bowtie_indexes %>%
 if (length(duplicates) > 0) {
   stop("the following bowtie index names differ only by case: '", str_c(duplicates, collapse = "', '"), "'")
 }
-
-# rename id column and add new numeric id column
-samples <- samples %>%
-  rename(name = id) %>%
-  mutate(id = row_number()) %>%
-  select(id, everything())
 
 # read genome details file
 genome_details <- read_csv(genome_details_file, col_types = cols(.default = col_character()))
