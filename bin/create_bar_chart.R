@@ -47,16 +47,19 @@ suppressPackageStartupMessages({
 output_plot_file_prefix <- str_c(output_prefix, "mga_alignment_summary")
 
 # genome alignment summaries
-alignment_summary <- read_csv(alignment_summary_file, show_col_types = FALSE)
-
-required_columns <- c("id", "genome", "expected", "control", "assigned", "assigned error rate")
-missing_columns <- setdiff(required_columns, colnames(alignment_summary))
-if (length(missing_columns) > 0) {
-  stop("missing columns in ", alignment_summary_file, " (", str_c(missing_columns, collapse = ", "), ")")
-}
+alignment_summary <- read_csv(
+  alignment_summary_file,
+  col_types = cols_only(
+    id = col_character(),
+    genome = col_character(),
+    expected = col_character(),
+    control = col_character(),
+    assigned = col_double(),
+    `assigned error rate` = col_double()
+  )
+)
 
 alignment_summary <- alignment_summary %>%
-  select(one_of(required_columns)) %>%
   rename(name = id) %>%
   mutate(expected = expected == "yes") %>%
   mutate(control = control == "yes")
@@ -70,16 +73,17 @@ alignment_summary <- alignment_summary %>%
   select(id, everything())
 
 # data set summaries
-summary <- read_csv(summary_file, show_col_types = FALSE)
-
-required_columns <- c("id", "sequences", "sampled", "adapter")
-missing_columns <- setdiff(required_columns, colnames(summary))
-if (length(missing_columns) > 0) {
-  stop("missing columns in ", summary_file, " (", str_c(missing_columns, collapse = ", "), ")")
-}
+summary <- read_csv(
+  summary_file,
+  col_types = cols_only(
+    id = col_character(),
+    sequences = col_double(),
+    sampled = col_double(),
+    adapter = col_double()
+  )
+)
 
 summary <- summary %>%
-  select(one_of(required_columns)) %>%
   rename(name = id) %>%
   left_join(sample_names, by = "name") %>%
   select(id, everything())
