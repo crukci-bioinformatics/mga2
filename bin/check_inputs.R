@@ -65,7 +65,7 @@ if (nrow(samples) == 0) {
   stop("empty sample sheet: ", samples_file)
 }
 
-if (nrow(filter(samples, is.na(samples$id))) > 0) {
+if (nrow(filter(samples, is.na(id))) > 0) {
   stop("missing ids found in ", samples_file)
 }
 
@@ -134,7 +134,7 @@ genome_details <- genome_details %>%
   select(all_of(expected_columns)) %>%
   mutate(genome_lower_case = str_to_lower(genome))
 
-if (nrow(filter(genome_details, is.na(genome_details$genome))) > 0) {
+if (nrow(filter(genome_details, is.na(genome))) > 0) {
   stop("missing genome ids found in ", genome_details_file)
 }
 
