@@ -165,7 +165,7 @@ process bowtie {
         alignments = "${prefix}.${genome}.tsv"
         """
         set -o pipefail
-        echo -e "genome\\tread\\tstrand\\tchromosome\\tposition\\tsequence\\tquality\\tnum\\tmismatches" > ${prefix}.${genome}.tsv
+        echo -e "genome\\tid\\tread\\tstrand\\tchromosome\\tposition\\tsequence\\tquality\\tnum\\tmismatches" > ${prefix}.${genome}.tsv
         if [[ `head ${fastq} | wc -l` -gt 0 ]]
         then
             bowtie \
@@ -174,7 +174,7 @@ process bowtie {
                 --chunkmbs 256 \
                 -x ${bowtie_index_dir}/${genome} \
                 ${fastq} \
-            | sed "s/^/${genome}\t/" \
+            | sed "s/|/\t/;s/^/${genome}\t/" \
             >> ${alignments}
         fi
         """
@@ -201,7 +201,7 @@ process exonerate {
         prefix = fasta.baseName
         alignments = "${prefix}.adapter_alignments.tsv"
         """
-        echo -e "read\\tstart\\tend\\tstrand\\tadapter\\tadapter start\\tadapter end\\tadapter strand\\tpercent identity\\tscore" > ${alignments}
+        echo -e "id\\tread\\tstart\\tend\\tstrand\\tadapter\\tadapter start\\tadapter end\\tadapter strand\\tpercent identity\\tscore" > ${alignments}
         if [[ `head ${fasta} | wc -l` -gt 0 ]]
         then
             exonerate \
@@ -213,6 +213,7 @@ process exonerate {
                 --ryo "%qi\\t%qab\\t%qae\\t%qS\\t%ti\\t%tab\\t%tae\\t%tS\\t%pi\\t%s\\n" \
                 ${fasta} \
                 ${adapters_fasta} \
+            | sed "s/|/\t/" \
             >> ${alignments}
         fi
         """
