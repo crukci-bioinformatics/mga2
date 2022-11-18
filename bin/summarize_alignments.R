@@ -158,10 +158,6 @@ for (sample_id in samples$id) {
 # read adapter alignments in chunks and sort into separate files for each sample
 # to limit memory requirements
 sort_adapters <- function(alignments, pos) {
-  alignments <- alignments %>%
-    separate(read, into = c("id", "read"), sep = "\\|", extra = "merge") %>%
-    select(id, all_of(names(adapter_alignment_columns)))
-
   for (sample_id in samples$id) {
     alignments %>%
       filter(id == sample_id) %>%
@@ -249,10 +245,6 @@ for (sample_id in samples$id) {
 # to limit memory requirements
 sort_alignments <- function(alignments, pos) {
   if (pos > 1) message(pos - 1)
-
-  alignments <- alignments %>%
-    separate(read, into = c("id", "read"), sep = "\\|", extra = "merge") %>%
-    select(id, all_of(names(alignment_columns)))
 
   for (sample_id in samples$id) {
     alignments %>%
