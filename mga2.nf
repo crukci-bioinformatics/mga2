@@ -278,8 +278,8 @@ workflow {
     adapters_fasta = channel.fromPath(params.adaptersFasta, checkIfExists: true)
 
     genomes = channel
-        .fromPath("${params.bowtieIndexDir}/*.rev.1.ebwt", checkIfExists: true)
-        .map { "${it.name}".replaceFirst(/.rev.1.ebwt$/, "") }
+        .fromPath("${params.bowtieIndexDir}/*.rev.1.ebwt{,l}", checkIfExists: true)
+        .map { "${it.name}".replaceFirst(/.rev.1.ebwtl?$/, "") }
 
     bowtie_index_list = genomes.collectFile(name: "bowtie_index_list.txt", newLine: true)
 
