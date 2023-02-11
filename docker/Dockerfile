@@ -1,15 +1,15 @@
-FROM rust:1.51-slim-buster
-
+FROM debian:11.6-slim
+  
 LABEL authors="Matt Eldridge" \
       version="2.1.0-snapshot" \
       description="Multi-Genome Analysis (MGA) contaminant screen for genomic sequence data"
 
 RUN apt-get update && \
-    apt-get install -y git curl procps && \
+    apt-get install -y build-essential curl git procps && \
     apt-get clean
 
-ARG CONDA_VERSION=py39_4.12.0
-ARG CONDA_SHA256=78f39f9bae971ec1ae7969f0516017f2413f17796670f7040725dd83fcff5689
+ARG CONDA_VERSION=py310_23.1.0-1
+ARG CONDA_SHA256=32d73e1bc33fda089d7cd9ef4c1be542616bd8e437d1f77afeeaf7afdb019787
 
 RUN curl https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-x86_64.sh -o miniconda3.sh && \
     echo "${CONDA_SHA256}  miniconda3.sh" > miniconda3.sha256 && \
