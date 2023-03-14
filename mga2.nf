@@ -98,8 +98,8 @@ process sample_fastq {
         path summary, emit: summary
 
     script:
-        sampled_fastq = "${id}.sample.fq"
-        summary = "${id}.summary.csv"
+        sampled_fastq = "sample.${id}.fq"
+        summary = "sample.${id}.sampling_summary.csv"
         """
         RUST_LOG=info \
         sample-fastq \
@@ -162,10 +162,10 @@ process bowtie {
 
     script:
         prefix = fastq.baseName
-        alignments = "${prefix}.${genome}.tsv"
+        alignments = "${prefix}.alignments.${genome}.tsv"
         """
         set -o pipefail
-        echo -e "genome\\tid\\tread\\tstrand\\tchromosome\\tposition\\tsequence\\tquality\\tnum\\tmismatches" > ${prefix}.${genome}.tsv
+        echo -e "genome\\tid\\tread\\tstrand\\tchromosome\\tposition\\tsequence\\tquality\\tnum\\tmismatches" > ${alignments}
         if [[ `head ${fastq} | wc -l` -gt 0 ]]
         then
             bowtie \
@@ -177,6 +177,29 @@ process bowtie {
             | sed "s/|/\t/;s/^/${genome}\t/" \
             >> ${alignments}
         fi
+        """
+}
+
+
+// split genome alignments into separate files based on the sample id column
+process split_genome_alignments_by_sample {
+    label 'mga2'
+
+    executor 'local'
+
+    input:
+        tuple val(chunk), path(alignments), path(fasta)
+
+    output:
+        path "sample.*.genome_alignments.tsv"
+
+    script:
+        """
+        split_alignments_by_sample.R \
+            --alignments=${alignments} \
+            --fasta=${fasta} \
+            --output-prefix="sample" \
+            --output-suffix="genome_alignments.tsv"
         """
 }
 
@@ -220,48 +243,90 @@ process exonerate {
 }
 
 
-// create summary tables and stacked bar chart
-process create_summary {
+// split adapter alignments into separate files based on the sample id column
+process split_adapter_alignments_by_sample {
     label 'mga2'
 
-    publishDir "${params.outputDir}", mode: 'copy'
-
-    memory { 2.GB * task.attempt }
-    time { 1.hour * task.attempt }
-    maxRetries 2
+    executor 'local'
 
     input:
-        path samples
-        path genomes
-        path counts
-        path alignments
-        path adapter_alignments
+        tuple val(chunk), path(alignments), path(fasta)
+
+    output:
+        path "sample.*.adapter_alignments.tsv"
+
+    script:
+        """
+        split_alignments_by_sample.R \
+            --alignments=${alignments} \
+            --fasta=${fasta} \
+            --output-prefix="sample" \
+            --output-suffix="adapter_alignments.tsv"
+        """
+}
+
+
+// summarize alignments
+process summarize_alignments {
+    label 'mga2'
+
+    memory 2.GB
+
+    input:
+        tuple val(chunk), path(sampling_summary), path(genome_alignments), path(adapter_alignments), path(samples), path(genomes)
 
     output:
         path summary, emit: summary
         path alignment_summary, emit: alignment_summary
-        path "${params.outputPrefix}mga_alignment_summary.png"
-        path "${params.outputPrefix}mga_alignment_summary.pdf"
-        path "${params.outputPrefix}mga_alignment_summary.svg"
-        path "${params.outputPrefix}mga_genome_alignments.tsv.gz"
-        path "${params.outputPrefix}mga_adapter_alignments.tsv.gz"
+        path output_genome_alignments, emit: genome_alignments
+        path output_adapter_alignments, emit: adapter_alignments
 
     script:
-        summary = "${params.outputPrefix}mga_summary.csv"
-        alignment_summary = "${params.outputPrefix}mga_alignment_summary.csv"
+        summary = "sample.${chunk}.summary.csv"
+        alignment_summary = "sample.${chunk}.alignment_summary.csv"
+        output_genome_alignments = "sample.${chunk}.genome_alignments.tsv"
+        output_adapter_alignments = "sample.${chunk}.adapter_alignments.tsv"
         """
         summarize_alignments.R \
             --samples=${samples} \
             --genomes=${genomes} \
-            --counts=${counts} \
-            --alignments=${alignments} \
+            --sampling-summary=${sampling_summary} \
+            --genome-alignments=${genome_alignments} \
             --adapter-alignments=${adapter_alignments} \
-            --output-prefix="${params.outputPrefix}"
+            --output-summary=${summary} \
+            --output-alignment-summary=${alignment_summary} \
+            --output-genome-alignments=${output_genome_alignments} \
+            --output-adapter-alignments=${output_adapter_alignments}
+        """
+}
 
+
+// create stacked bar chart
+process create_bar_chart {
+    label 'mga2'
+
+    publishDir "${params.outputDir}", mode: 'copy'
+
+    input:
+        path summary
+        path alignment_summary
+
+    output:
+        path pdf
+        path png
+        path svg
+
+    script:
+        pdf = "${params.outputPrefix}alignment_summary.pdf"
+        png = "${params.outputPrefix}alignment_summary.png"
+        svg = "${params.outputPrefix}alignment_summary.svg"
+        """
         create_bar_chart.R \
             --summary=${summary} \
             --alignment-summary=${alignment_summary} \
-            --output-prefix="${params.outputPrefix}"
+            --output-pdf="${pdf}" \
+            --output-png="${png}" \
+            --output-svg="${svg}" \
         """
 }
 
@@ -298,9 +363,13 @@ workflow {
     sample_fastq(fastq.map { it[0..2] })
 
     counts = sample_fastq.out.summary
-        .collectFile(name: "sequence_counts.collected.csv", keepHeader: true)
+        .collectFile(name: "sampling_summary.csv", keepHeader: true)
 
     trim_and_split(sample_fastq.out.fastq.collect())
+
+    fasta = trim_and_split.out.fasta
+        .flatten()
+        .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
 
     bowtie(
         trim_and_split.out.fastq,
@@ -308,22 +377,70 @@ workflow {
         genomes.collect()
     )
 
-    alignments = bowtie.out.collectFile(name: "alignments.collected.tsv", keepHeader: true)
+    chunk_genome_alignments = bowtie.out
+        .collectFile(keepHeader: true) { it -> [ "chunk.${it.name.split('\\.')[1]}.genome_alignments.tsv", it ] }
+        .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
+
+    sample_genome_alignments = split_genome_alignments_by_sample(chunk_genome_alignments.join(fasta))
+        .flatten()
+        .collectFile(keepHeader: true) { it -> [ "sample.${it.name.split('\\.')[1]}.genome_alignments.tsv", it ] }
+        .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
 
     exonerate(
         trim_and_split.out.fasta,
         adapters_fasta
     )
 
-    adapter_alignments = exonerate.out.collectFile(name: "adapter_alignments.collected.tsv", keepHeader: true)
+    chunk_adapter_alignments = exonerate.out
+        .collectFile(keepHeader: true) { it -> [ "chunk.${it.name.split('\\.')[1]}.adapter_alignments.tsv", it ] }
+        .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
 
-    create_summary(
-        check_inputs.out.samples,
-        check_inputs.out.genomes,
-        counts,
-        alignments,
-        adapter_alignments
-    )
+    sample_adapter_alignments = split_adapter_alignments_by_sample(chunk_adapter_alignments.join(fasta))
+        .flatten()
+        .collectFile(keepHeader: true) { it -> [ "sample.${it.name.split('\\.')[1]}.adapter_alignments.tsv", it ] }
+        .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
+
+    sample_fastq.out.summary
+        .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
+        .join(sample_genome_alignments)
+        .join(sample_adapter_alignments)
+        .combine(check_inputs.out.samples)
+        .combine(check_inputs.out.genomes)
+        | summarize_alignments
+
+    summary = summarize_alignments.out.summary
+        .collectFile(
+            name: "${params.outputPrefix}summary.csv",
+            storeDir: "${params.outputDir}",
+            keepHeader: true,
+            sort: { it.name.split("\\.")[1].toInteger() }
+        ) 
+
+    alignment_summary = summarize_alignments.out.alignment_summary
+        .collectFile(
+            name: "${params.outputPrefix}alignment_summary.csv",
+            storeDir: "${params.outputDir}",
+            keepHeader: true,
+            sort: { it.name.split("\\.")[1].toInteger() }
+        ) 
+
+    summarize_alignments.out.genome_alignments
+        .collectFile(
+            name: "${params.outputPrefix}genome_alignments.tsv",
+            storeDir: "${params.outputDir}",
+            keepHeader: true,
+            sort: { it.name.split("\\.")[1].toInteger() }
+        ) 
+
+    summarize_alignments.out.adapter_alignments
+        .collectFile(
+            name: "${params.outputPrefix}adapter_alignments.tsv",
+            storeDir: "${params.outputDir}",
+            keepHeader: true,
+            sort: { it.name.split("\\.")[1].toInteger() }
+        ) 
+
+    create_bar_chart(summary, alignment_summary)
 }
 
 
