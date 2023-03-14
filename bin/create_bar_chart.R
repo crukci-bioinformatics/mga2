@@ -19,8 +19,14 @@ option_list <- list(
   make_option(c("--alignment-summary"), dest = "alignment_summary_file",
               help = "CSV file containing alignment/assignment summary for each genome and data set"),
 
-  make_option(c("--output-prefix"), dest = "output_prefix",
-              help = "Prefix for output plot files")
+  make_option(c("--output-pdf"), dest = "output_pdf_file",
+              help = "Output stacked bar plot PDF file"),
+
+  make_option(c("--output-png"), dest = "output_png_file",
+              help = "Output stacked bar plot PNG file"),
+
+  make_option(c("--output-svg"), dest = "output_svg_file",
+              help = "Output stacked bar plot SVG file")
 )
 
 option_parser <- OptionParser(usage = "usage: %prog [options]", option_list = option_list, add_help_option = TRUE)
@@ -28,12 +34,12 @@ opt <- parse_args(option_parser)
 
 summary_file <- opt$summary_file
 alignment_summary_file <- opt$alignment_summary_file
-output_prefix <- opt$output_prefix
+output_pdf_file <- opt$output_pdf_file
+output_png_file <- opt$output_png_file
+output_svg_file <- opt$output_svg_file
 
 if (is.null(summary_file)) stop("Summary file must be specified")
 if (is.null(alignment_summary_file)) stop("Alignment summary file must be specified")
-
-if (is.null(output_prefix)) output_prefix <- ""
 
 suppressPackageStartupMessages({
   library(readr)
@@ -43,8 +49,6 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(ggplot2)
 })
-
-output_plot_file_prefix <- str_c(output_prefix, "mga_alignment_summary")
 
 # genome alignment summaries
 alignment_summary <- read_csv(
@@ -146,7 +150,14 @@ plot <- ggplot(plot_data, aes(x = type, y = scaled_count, group = group, fill = 
 width <- 10
 height <- 0.7 * (1.5 + nrow(sample_names))
 
-ggsave(str_c(output_plot_file_prefix, ".png"), plot, width = width, height = height)
-ggsave(str_c(output_plot_file_prefix, ".pdf"), plot, width = width, height = height)
-ggsave(str_c(output_plot_file_prefix, ".svg"), plot, width = width, height = height)
+if (!is.null(output_pdf_file)) {
+  ggsave(output_pdf_file, plot, width = width, height = height)
+}
 
+if (!is.null(output_png_file)) {
+  ggsave(output_png_file, plot, width = width, height = height)
+}
+
+if (!is.null(output_svg_file)) {
+  ggsave(output_svg_file, plot, width = width, height = height)
+}
