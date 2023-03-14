@@ -66,10 +66,8 @@ ids <- tibble(line = fasta_lines) %>%
 
 # loop over ids, filter data and write to output file
 for (id in ids) {
-  message(id)
   output_file <- str_c(output_prefix, id, output_suffix, sep = ".")
   data %>%
     filter(id == !!id) %>%
     write_tsv(output_file, na = "")
-  message(output_file)
 }
