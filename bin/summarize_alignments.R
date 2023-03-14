@@ -6,8 +6,7 @@
 # This file may not be copied, modified, or distributed except according
 # to those terms.
 
-# Summarize alignments to reference genomes and adapter matches into
-# final output tables.
+# Summarize alignments to reference genomes.
 
 suppressPackageStartupMessages(library(optparse))
 
@@ -19,17 +18,26 @@ option_list <- list(
   make_option(c("--genomes"), dest = "genomes_file",
               help = "Genomes file containing list of indexed reference genome sequences and associated species"),
 
-  make_option(c("--counts"), dest = "counts_file",
-              help = "Sequence counts file output by sample-fastq containing id, read and sampled columns"),
+  make_option(c("--sampling-summary"), dest = "sampling_summary_file",
+              help = "Summary file output by sample-fastq containing id, read and sampled columns"),
 
-  make_option(c("--alignments"), dest = "alignments_file",
-              help = "Alignments file with collated output from bowtie with genome, read, strand, chromosome, position, sequence, quality, num and mismatch columns"),
+  make_option(c("--genome-alignments"), dest = "genome_alignments_file",
+              help = "Genome alignments file with collated output from bowtie with genome, read, strand, chromosome, position, sequence, quality, num and mismatch columns"),
 
   make_option(c("--adapter-alignments"), dest = "adapter_alignments_file",
               help = "Adapter alignments file with collated output from exonerate with read, start, end, strand, adapter, adapter_start, adapter_end, adapter_strand, percent_identity and score columns"),
 
-  make_option(c("--output-prefix"), dest = "output_prefix",
-              help = "Prefix for output files")
+  make_option(c("--output-summary"), dest = "output_summary_file",
+              help = "Output summary file"),
+
+  make_option(c("--output-alignment-summary"), dest = "output_alignment_summary_file",
+              help = "Output alignment summary file"),
+
+  make_option(c("--output-genome-alignments"), dest = "output_genome_alignments_file",
+              help = "Output alignments file"),
+
+  make_option(c("--output-adapter-alignments"), dest = "output_adapter_alignments_file",
+              help = "Output adapter alignments file")
 )
 
 option_parser <- OptionParser(usage = "usage: %prog [options]", option_list = option_list, add_help_option = TRUE)
@@ -37,54 +45,34 @@ opt <- parse_args(option_parser)
 
 samples_file <- opt$samples_file
 genomes_file <- opt$genomes_file
-counts_file <- opt$counts_file
-alignments_file <- opt$alignments_file
+sampling_summary_file <- opt$sampling_summary_file
+genome_alignments_file <- opt$genome_alignments_file
 adapter_alignments_file <- opt$adapter_alignments_file
-output_prefix <- opt$output_prefix
+output_summary_file <- opt$output_summary_file
+output_alignment_summary_file <- opt$output_alignment_summary_file
+output_genome_alignments_file <- opt$output_genome_alignments_file
+output_adapter_alignments_file <- opt$output_adapter_alignments_file
 
 if (is.null(samples_file)) stop("Samples file must be specified")
 if (is.null(genomes_file)) stop("Genomes file must be specified")
-if (is.null(counts_file)) stop("Sequence counts file must be specified")
-if (is.null(alignments_file)) stop("Alignments file must be specified")
+if (is.null(sampling_summary_file)) stop("Sampling summmary file must be specified")
+if (is.null(genome_alignments_file)) stop("Genome alignments file must be specified")
 if (is.null(adapter_alignments_file)) stop("Adapter alignments file must be specified")
-
-if (is.null(output_prefix)) output_prefix <- ""
+if (is.null(output_summary_file)) stop("Output summary file must be specified")
+if (is.null(output_alignment_summary_file)) stop("Output alignment summary file must be specified")
+if (is.null(output_genome_alignments_file)) stop("Output genome alignments file must be specified")
+if (is.null(output_adapter_alignments_file)) stop("Output adapter alignments file must be specified")
 
 suppressPackageStartupMessages({
   library(readr)
   library(stringr)
   library(tidyr)
   library(dplyr)
+  library(forcats)
 })
 
-output_summary_file <- str_c(output_prefix, "mga_summary.csv")
-output_alignments_file <- str_c(output_prefix, "mga_genome_alignments.tsv.gz")
-output_adapter_alignments_file <- str_c(output_prefix, "mga_adapter_alignments.tsv.gz")
-output_alignment_summary_file <- str_c(output_prefix, "mga_alignment_summary.csv")
-output_plot_file_prefix <- str_c(output_prefix, "mga_alignment_summary")
 
-options(scipen = 999)
-
-
-# genomes
-# -------
-
-# read genomes that have been aligned to
-message("Reading genome details")
-genomes <- read_csv(
-  genomes_file,
-  col_types = cols_only(
-    genome = col_factor(),
-    species = col_character()
-  )
-)
-
-genome_levels <- levels(genomes$genome)
-
-
-# samples
-# -------
-
+# read sample information
 message("Reading sample information")
 samples <- read_csv(
   samples_file,
@@ -99,7 +87,38 @@ samples <- read_csv(
   )
 )
 
+
+# read summary from FASTQ sampling
+message("Reading sampling summary")
+sampling_summary <- read_csv(
+  sampling_summary_file,
+  col_types = cols_only(
+    id = col_factor(),
+    read = col_double(),
+    sampled = col_double()
+  )
+)
+
+sampling_summary <- rename(sampling_summary, sequences = read)
+
+samples <- inner_join(samples, sampling_summary, by = "id") %>%
+  mutate(id = fct_drop(id))
+
 id_levels <- levels(samples$id)
+
+
+# read genomes that have been aligned to
+message("Reading genome details")
+genomes <- read_csv(
+  genomes_file,
+  col_types = cols_only(
+    genome = col_factor(),
+    species = col_character()
+  )
+)
+
+genome_levels <- levels(genomes$genome)
+
 
 # expected and control genomes for each sample
 expected_genomes <- samples %>%
@@ -121,44 +140,13 @@ expected_genomes <- expected_genomes %>%
 control_genomes <- mutate(control_genomes, control = TRUE)
 
 
-# sequence and sample counts
-# --------------------------
-
-# read sequence counts summary from FASTQ sampling
-message("Reading sequence counts from sampling")
-counts <- read_csv(
-  counts_file,
-  col_types = cols_only(
-    id = col_factor(),
-    read = col_double(),
-    sampled = col_double()
-  )
-)
-
-counts <- counts %>%
-  mutate(id = factor(id, levels = id_levels)) %>%
-  rename(sequences = read)
-
-samples <- left_join(samples, counts, by = "id")
-
-missing_counts <- samples %>%
-  select(id, sequences, sampled) %>%
-  filter(!complete.cases(.))
-if (nrow(missing_counts) > 0) {
-  stop("missing counts for sample(s): ", str_c(missing_counts$id, collapse = ", "))
-}
-
-
 # extracts from samples table used in join operations later
 sample_names <- select(samples, id, name)
 sampled_counts <- select(samples, id, total = sampled)
 
 
-# adapter matches
-# ---------------
-
+# read adapter alignments
 message("Reading adapter alignments")
-
 adapter_alignment_columns <- list(
   id = col_factor(),
   read = col_character(),
@@ -179,7 +167,7 @@ alignments <- alignments %>%
   select(names(adapter_alignment_columns)) %>%
   mutate(id = factor(id, levels = id_levels))
 
-# summarize adapter alignments for each sample
+# summarize adapter alignments
 message("Summarizing adapter alignments")
 
 adapter_counts <- alignments %>%
@@ -197,12 +185,8 @@ alignments %>%
   write_tsv(output_adapter_alignments_file, na = "")
 
 
-# genome alignments
-# -----------------
-
-# read bowtie alignment output
+# read bowtie genome alignments
 message("Reading genome alignments")
-
 alignment_columns <- list(
   id = col_factor(),
   read = col_character(),
@@ -215,14 +199,14 @@ alignment_columns <- list(
   mismatches = col_character()
 )
 
-alignments <- read_tsv(alignments_file, col_types = alignment_columns)
+alignments <- read_tsv(genome_alignments_file, col_types = alignment_columns)
 
 alignments <- alignments %>%
   select(names(alignment_columns)) %>%
   mutate(id = factor(id, levels = id_levels)) %>%
   mutate(genome = factor(genome, levels = genome_levels))
 
-# summarize alignments for each sample
+# summarize genome alignments
 message("Summarizing genome alignments")
 
 # calculate sequence lengths and count mismatches
@@ -324,7 +308,7 @@ assigned_summary <- alignments %>%
 
 # write best alignments for each read
 alignments %>%
-  mutate(across(where(is.logical), ifelse, "yes", "no")) %>%
+  mutate(across(where(is.logical), ~ ifelse(.x, "yes", "no"))) %>%
   left_join(sample_names, by = "id") %>%
   arrange(id, read, genome) %>%
   select(
@@ -340,19 +324,19 @@ alignments %>%
     expected,
     control,
     assigned) %>%
-  write_tsv(output_alignments_file, na = "")
+  write_tsv(output_genome_alignments_file, na = "")
 
 # unmapped read summary
 unmapped_summary <- assigned_summary %>%
-  count(id, wt = count, name = "aligned", .drop = FALSE) %>%
+  count(id, wt = count, name = "aligned") %>%
   left_join(sampled_counts, by = "id") %>%
   mutate(count = total - aligned) %>%
   mutate(percentage = ifelse(total == 0, 0.0, round(100 * count / total, digits = 1))) %>%
   select(id, count, percentage)
 
 
-# summary tables
-# --------------
+# write summary tables
+message("Writing summary tables")
 
 # general summary with one row per sample/dataset
 samples %>%
@@ -380,7 +364,7 @@ samples %>%
 
 # genome alignment summary
 alignment_summary <- sample_names %>%
-  left_join(aligned_summary, by = "id") %>%
+  left_join(aligned_summary, by = "id", multiple = "all") %>%
   rename(
     aligned = count,
     `aligned %` = percentage,
@@ -419,5 +403,5 @@ alignment_summary <- alignment_summary %>%
 alignment_summary %>%
   mutate(id = name) %>%
   select(-name) %>%
-  mutate(across(where(is.logical), ifelse, "yes", "no")) %>%
+  mutate(across(where(is.logical), ~ ifelse(.x, "yes", "no"))) %>%
   write_csv(output_alignment_summary_file, na = "")
