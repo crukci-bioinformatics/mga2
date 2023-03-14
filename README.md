@@ -216,7 +216,7 @@ genomeDetails         | ${projectDir}/resources/genomes.csv | CSV file containin
 bowtieIndexDir        | bowtie_indexes  | Directory containing bowtie indexes for reference genomes
 adaptersFasta         | ${projectDir}/resources/adapters.fa | FASTA file containing adapter sequences
 outputDir             | ${launchDir}    | Directory to which output files are written
-outputPrefix          |                 | Prefix for output file names
+outputPrefix          | mga_            | Prefix for output file names
 
 Note that `${projectDir}` and `${launchDir}` are Nextflow variables that
 correspond to the MGA installation directory and the directory in which MGA is
@@ -417,9 +417,10 @@ debugging Nextflow pipelines.
 
 The work directories contain intermediate files produced when running MGA. The
 final outputs are written either to the launch directory or the directory
-specified using the `--outputDir` command line option or the `outputDir` parameter. The `work` directory
-can be deleted on successful completion of the MGA pipeline unless other
-Nextflow pipelines are also being run from the launch directory.
+specified using the `--outputDir` command line option or the `outputDir`
+parameter. The `work` directory can be deleted on successful completion of the
+MGA pipeline unless other Nextflow pipelines are also being run from the launch
+directory.
 
 ---
 
@@ -429,9 +430,9 @@ File                          | Description
 ------------------------------|------------------------------
 mga_summary.csv               | Summary of the number of sequences for each sample/dataset, the number sampled and the percentage aligning to the expected species and controls along with error/mismatch rates
 mga_alignment_summary.csv     | Summary of the number of sampled sequences for each sample/dataset aligned to each genome along with error/mismatch rates, also the numbers of sequences assigned to each genome
-mga_alignment_summary.png   | Stacked bar chart summarizing the numbers of sequences assigned to each genome
-mga_alignment_summary.svg   | Stacked bar chart as SVG file
-mga_alignment_summary.pdf   | Stacked bar chart as PDF file
+mga_alignment_summary.png     | Stacked bar chart summarizing the numbers of sequences assigned to each genome
+mga_alignment_summary.svg     | Stacked bar chart as SVG file
+mga_alignment_summary.pdf     | Stacked bar chart as PDF file
 mga_genome_alignments.tsv.gz  | Table containing alignments with the fewest mismatches for each of the sampled sequences
 mga_adapter_alignments.tsv.gz | Table containing adapter matches for each of the sampled sequences
 
@@ -444,7 +445,7 @@ Additionally, it is possible to set a prefix for the file names using the
 config file. This might be useful for prepending an identifier for the run or
 flow cell to the output file names, e.g.
 
-    nextflow run crukci-bioinformatics/mga2 --outputPrefix="H3MTJDRXY"
+    nextflow run crukci-bioinformatics/mga2 --outputPrefix="H3MTJDRXY."
 
 ### Summary plot
 
