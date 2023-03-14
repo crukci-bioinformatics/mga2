@@ -120,8 +120,6 @@ process sample_fastq {
 process trim_and_split {
     label 'mga2'
 
-    executor 'local'
-
     input:
         path fastq
 
@@ -185,7 +183,7 @@ process bowtie {
 process split_genome_alignments_by_sample {
     label 'mga2'
 
-    executor 'local'
+    memory 2.GB
 
     input:
         tuple val(chunk), path(alignments), path(fasta)
@@ -247,7 +245,7 @@ process exonerate {
 process split_adapter_alignments_by_sample {
     label 'mga2'
 
-    executor 'local'
+    memory 2.GB
 
     input:
         tuple val(chunk), path(alignments), path(fasta)
@@ -269,8 +267,6 @@ process split_adapter_alignments_by_sample {
 // summarize alignments
 process summarize_alignments {
     label 'mga2'
-
-    memory 2.GB
 
     input:
         tuple val(chunk), path(sampling_summary), path(genome_alignments), path(adapter_alignments), path(samples), path(genomes)
