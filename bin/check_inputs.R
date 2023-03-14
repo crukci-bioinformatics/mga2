@@ -185,7 +185,7 @@ if (length(duplicates) > 0) {
 # combine genome details and synonyms tables
 synonyms <- genome_details %>%
   select(-synonyms) %>%
-  left_join(synonyms, by = "genome")
+  left_join(synonyms, by = "genome", multiple = "all")
 
 # find matching genomes
 species <- samples %>%
