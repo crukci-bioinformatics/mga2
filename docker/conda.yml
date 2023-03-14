@@ -6,7 +6,7 @@ channels:
 dependencies:
   - conda-forge::rust=1.67.1
   - conda-forge::r-base=4.2.2
-  - conda-forge::r-tidyverse=1.3.2
+  - conda-forge::r-tidyverse=2.0.0
   - conda-forge::r-optparse=1.7.3
   - conda-forge::r-svglite=2.1.1
   - conda-forge::fonts-conda-forge=1
