@@ -1,5 +1,5 @@
 FROM debian:11.6-slim
-  
+
 LABEL authors="Matt Eldridge" \
       version="2.1.0-snapshot" \
       description="Multi-Genome Analysis (MGA) contaminant screen for genomic sequence data"
