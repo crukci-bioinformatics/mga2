@@ -297,11 +297,35 @@ process summarize_alignments {
 }
 
 
+// compress alignment files
+process compress_alignments {
+    label 'mga2'
+
+    publishDir "${params.outputDir}", mode: 'move'
+
+    input:
+        path genome_alignments
+        path adapter_alignments
+
+    output:
+        path compressed_genome_alignments
+        path compressed_adapter_alignments
+
+    script:
+        compressed_genome_alignments = "${genome_alignments}.gz"
+        compressed_adapter_alignments = "${adapter_alignments}.gz"
+        """
+        gzip -c ${genome_alignments} > ${compressed_genome_alignments}
+        gzip -c ${adapter_alignments} > ${compressed_adapter_alignments}
+        """
+}
+
+
 // create stacked bar chart
 process create_bar_chart {
     label 'mga2'
 
-    publishDir "${params.outputDir}", mode: 'copy'
+    publishDir "${params.outputDir}", mode: 'move'
 
     input:
         path summary
@@ -410,7 +434,7 @@ workflow {
             storeDir: "${params.outputDir}",
             keepHeader: true,
             sort: { it.name.split("\\.")[1].toInteger() }
-        ) 
+        )
 
     alignment_summary = summarize_alignments.out.alignment_summary
         .collectFile(
@@ -418,23 +442,23 @@ workflow {
             storeDir: "${params.outputDir}",
             keepHeader: true,
             sort: { it.name.split("\\.")[1].toInteger() }
-        ) 
+        )
 
-    summarize_alignments.out.genome_alignments
+    genome_alignments = summarize_alignments.out.genome_alignments
         .collectFile(
             name: "${params.outputPrefix}genome_alignments.tsv",
-            storeDir: "${params.outputDir}",
             keepHeader: true,
             sort: { it.name.split("\\.")[1].toInteger() }
-        ) 
+        )
 
-    summarize_alignments.out.adapter_alignments
+    adapter_alignments = summarize_alignments.out.adapter_alignments
         .collectFile(
             name: "${params.outputPrefix}adapter_alignments.tsv",
-            storeDir: "${params.outputDir}",
             keepHeader: true,
             sort: { it.name.split("\\.")[1].toInteger() }
-        ) 
+        )
+
+    compress_alignments(genome_alignments, adapter_alignments)
 
     create_bar_chart(summary, alignment_summary)
 }
