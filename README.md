@@ -44,7 +44,7 @@ each sample or dataset and the expected species and/or controls
 
 5. Run MGA specifying the configuration file and, optionally, a release version and an execution profile
 
-    `nextflow run crukci-bioinformatics/mga2 -r 2.0.3 -c mga.config -profile cluster`
+    `nextflow run crukci-bioinformatics/mga2 -r 2.0.5 -c mga.config -profile cluster`
 
 ---
 
@@ -67,12 +67,12 @@ Using the latest stable [release](https://github.com/crukci-bioinformatics/mga2/
 of MGA is recommended. A specific version of MGA can be installed using
 `nextflow pull` as follows:
 
-    nextflow pull crukci-bioinformatics/mga2 -r 2.0.3
+    nextflow pull crukci-bioinformatics/mga2 -r 2.0.5
 
 When a specific version of MGA is installed in this way the revision also needs
 to be specified when running the pipeline using `nextflow run`.
 
-    nextflow run crukci-bioinformatics/mga2 -r 2.0.3 -c mga.config -profile myprofile
+    nextflow run crukci-bioinformatics/mga2 -r 2.0.5 -c mga.config -profile myprofile
 
 Run `nextflow info` to view details about the currently installed version.
 

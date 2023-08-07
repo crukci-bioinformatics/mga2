@@ -1,6 +1,6 @@
 [package]
 name = "mga2"
-version = "2.1.0-snapshot"
+version = "2.0.5"
 authors = ["eldrid01 <matthew.d.eldridge@gmail.com>"]
 edition = "2018"
 
