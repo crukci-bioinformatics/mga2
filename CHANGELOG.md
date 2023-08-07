@@ -12,7 +12,7 @@
 
 * Docker container now based on Debian slim base image, updates to more recent versions of R and dependent R packages, added rust to the conda environment
 
-* No capable of handling of large bowtie indexes with ebwtl suffix
+* Now capable of handling of large bowtie indexes with ebwtl suffix
 
 ## [2.0.4](https://github.com/crukci-bioinformatics/mga2/releases/tag/2.0.4) (2022-11-18)
 
