@@ -56,7 +56,7 @@ if (!"id" %in% colnames(data)) {
 # read the FASTA file
 fasta_lines <- readLines(fasta_file)
 
-# obtain the distinct set of ids
+# obtain the distinct set of ids
 ids <- tibble(line = fasta_lines) %>%
   filter(str_detect(line, "^>")) %>%
   mutate(id = str_remove(line, "^>")) %>%
