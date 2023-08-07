@@ -1,0 +1,4 @@
+id,name,fastq,species,controls,genomes,control_genomes
+1,SLX-19791,fastq/SLX-19791.*.r_1.*fq.gz,mouse,phix,mmu.GRCm38,phix.Illumina.RTA
+2,SLX-19792,fastq/SLX-19792.r_1.fq.gz,mouse,phix,mmu.GRCm38,phix.Illumina.RTA
+3,SLX-19793,fastq/SLX-19793.*.r_1.*fq.gz,mouse,phix,mmu.GRCm38,phix.Illumina.RTA
