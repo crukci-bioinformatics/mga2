@@ -1,0 +1,25 @@
+
+- add version, date and any notes to CHANGELOG.md
+
+- update versions
+  - Dockerfile - in two places: LABEL version and ARG VERSION
+  - nextflow.config - manifest section and container tag
+  - Cargo.toml
+  - README.md - examples of nextflow run and pull using the -r option
+
+- commit changes
+
+- create release in GitHub
+  - use version number, e.g. 2.0.5, for both tag and release title
+  - use changelog for description but not the line containing version and date
+
+- build and push Docker container on bioinf-srv008
+git clone --branch 2.0.5 --depth 1 https://github.com/crukci-bioinformatics/mga2 mga2-2.0.5
+cd mga2-2.0.5/docker
+make release version=2.0.5
+
+- update versions to, e.g., 2.1.0-snapshot in same files as above
+  - Dockerfile - set ARG VERSION=master
+  - nextflow.config - set container tag to latest
+  - Cargo.toml
+
