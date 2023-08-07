@@ -1,5 +1,25 @@
 # mga2
 
+## [2.0.5](https://github.com/crukci-bioinformatics/mga2/releases/tag/2.0.4) (2022-08-07)
+
+* Reworked alignment summarization R script so that this is done for each sample separately (more efficient for large numbers of samples), new processs added for splitting and collating chunked alignment output files
+
+* Added process for compressing the final alignment files
+
+* Tasks for trimming and splitting input FASTQ sequences and splitting alignments no longer use the local executor but run as separate jobs
+
+* Added run option for Singularity to prevent it mounting the users home directory, removed cacheDir setting for the Singularity image so will now be built in a work subdirectory
+
+* Docker container now based on Debian slim base image, updates to more recent versions of R and dependent R packages, added rust to the conda environment
+
+* No capable of handling of large bowtie indexes with ebwtl suffix
+
+## [2.0.4](https://github.com/crukci-bioinformatics/mga2/releases/tag/2.0.4) (2022-11-18)
+
+* Reworked summarize_alignments.R to read in alignments for all datasets into single data frame instead of splitting into separate chunks following occasional hanging jobs on CRUK CI HPC cluster running read_tsv_chunked operation
+
+* Changed exit status codes used for Nextflow error/retry strategy
+
 ## [2.0.3](https://github.com/crukci-bioinformatics/mga2/releases/tag/2.0.3) (2022-08-15)
 
 * Updated Conda environment (Miniconda3 py39_4.12.0) and added check for SHA-256 checksum
