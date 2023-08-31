@@ -165,7 +165,7 @@ This run contains two multiplexed pools of sequencing libraries with the first
 pool run on lanes 1 - 3 and the other on lane 4. The FASTQ files are located in
 a subdirectory named `fastq` and the wildcard character is used to include all
 matching FASTQ files. Note that records are sampled from the second read ('r_2')
-of each lane in this case as these pools contain 10X Genomics single cell
+of each lane in this case as these pools contain 10x Genomics single cell
 RNA-seq libraries. The SLX-20261 pool contains libraries from both human and
 mouse samples so both are included as expected species. A PhiX control has been
 spiked into each lane.
