@@ -64,16 +64,16 @@ alignment_summary <- read_csv(
 )
 
 alignment_summary <- alignment_summary %>%
-  rename(name = id) %>%
+  rename(user_id = id) %>%
   mutate(expected = expected == "yes") %>%
   mutate(control = control == "yes")
 
-sample_names <- alignment_summary %>%
-  distinct(name) %>%
+sample_ids <- alignment_summary %>%
+  distinct(user_id) %>%
   mutate(id = row_number())
 
 alignment_summary <- alignment_summary %>%
-  left_join(sample_names, by = "name") %>%
+  left_join(sample_ids, by = "user_id") %>%
   select(id, everything())
 
 # data set summaries
@@ -88,8 +88,8 @@ summary <- read_csv(
 )
 
 summary <- summary %>%
-  rename(name = id) %>%
-  left_join(sample_names, by = "name") %>%
+  rename(user_id = id) %>%
+  left_join(sample_ids, by = "user_id") %>%
   select(id, everything())
 
 counts <- select(summary, id, sequences, sampled)
@@ -98,25 +98,25 @@ lower_error_rate <- 0.25
 upper_error_rate <- 1.5
 
 plot_data <- alignment_summary %>%
-  select(id, name, reference = genome, count = assigned, error_rate = `assigned error rate`, expected, control) %>%
+  select(id, user_id, reference = genome, count = assigned, error_rate = `assigned error rate`, expected, control) %>%
   filter(count > 0) %>%
   mutate(category = ifelse(expected, "expected species", "unexpected/contaminant")) %>%
   mutate(category = ifelse(control, "control", category)) %>%
   mutate(category = replace_na(as.character(category), "unmapped")) %>%  # category will be logical if there are no rows with non-zero counts
   select(-expected, -control) %>%
   mutate(type = "genome") %>%
-  bind_rows(transmute(summary, id, name, reference = "adapter", count = adapter, error_rate = lower_error_rate, category = "adapter", type = "adapter")) %>%
+  bind_rows(transmute(summary, id, user_id, reference = "adapter", count = adapter, error_rate = lower_error_rate, category = "adapter", type = "adapter")) %>%
   left_join(counts, by = "id") %>%
   mutate(scaled_count = ifelse(sampled == 0, 0, (count / sampled) * sequences / 1e6)) %>%
   select(-sampled, -sequences) %>%
   arrange(id) %>%
-  mutate(name = as_factor(name)) %>%
+  mutate(user_id = as_factor(user_id)) %>%
   mutate(type = factor(type, levels = c("adapter", "genome"))) %>%
   mutate(category = factor(category, levels = rev(c("expected species", "control", "unexpected/contaminant", "unmapped", "adapter")))) %>%
   mutate(bounded_error_rate = pmin(error_rate, upper_error_rate, na.rm = TRUE)) %>%
   mutate(bounded_error_rate = pmax(bounded_error_rate, lower_error_rate, na.rm = TRUE)) %>%
   mutate(bounded_error_rate = ifelse(category == "unmapped", lower_error_rate, bounded_error_rate)) %>%
-  arrange(name, type, category, count) %>%
+  arrange(user_id, type, category, count) %>%
   mutate(group = row_number()) %>%
   mutate(bar_width = ifelse(type == "adapter", 0.5, 1))
 
@@ -127,7 +127,7 @@ plot <- ggplot(plot_data, aes(x = type, y = scaled_count, group = group, fill = 
   scale_alpha(guide = "none") +
   labs(y = "sequence reads (millions)") +
   coord_flip() +
-  facet_grid(rows = vars(name), switch = "y") +
+  facet_grid(rows = vars(user_id), switch = "y") +
   theme_bw() +
   theme(
     legend.position = "bottom",
@@ -148,7 +148,7 @@ plot <- ggplot(plot_data, aes(x = type, y = scaled_count, group = group, fill = 
   )
 
 width <- 10
-height <- 0.7 * (1.5 + nrow(sample_names))
+height <- 0.7 * (1.5 + nrow(sample_ids))
 
 if (!is.null(output_pdf_file)) {
   ggsave(output_pdf_file, plot, width = width, height = height)
