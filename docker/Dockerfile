@@ -29,6 +29,6 @@ ADD "https://api.github.com/repos/crukci-bioinformatics/mga2/commits?per_page=1"
 
 ARG VERSION=master
 
-RUN git clone --branch ${VERSION} --depth 1 https://github.com/crukci-bioinformatics/mga2 /opt/mga2 && \
-    cargo install --path /opt/mga2 --root /opt/mga2
+RUN git clone --branch ${VERSION} --depth 1 https://github.com/crukci-bioinformatics/mga2 /opt/mga2/src && \
+    cargo install --path /opt/mga2/src --root /opt/mga2
 
