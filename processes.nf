@@ -3,6 +3,28 @@
 // processes
 // -----------------------------------------------------------------------------
 
+// add sample_id column to the sample sheet
+// used in place of user-specified ids in the workflow composition
+process add_sample_ids {
+    label 'mga2'
+
+    executor 'local'
+
+    input:
+        path samples
+
+    output:
+        path samples_with_ids
+
+    script:
+        samples_with_ids = "samples.ids.csv"
+        """
+        add_sample_ids.R \
+            --samples=${samples} \
+            --output-samples=${samples_with_ids} \
+        """
+}
+
 // check input sample sheet and details of genomes to be screened
 process check_inputs {
     label 'mga2'
@@ -34,12 +56,12 @@ process check_inputs {
 // sample records from input FASTQ file(s)
 process sample_fastq {
     label 'mga2'
-    tag "${id} ${name}"
+    tag "${id}"
 
     time 12.hour
 
     input:
-        tuple val(id), val(name), path(fastq)
+        tuple val(id), path(fastq)
         val sampleSize
         val maxNumberToSampleFrom
         val minimumSequenceLength
