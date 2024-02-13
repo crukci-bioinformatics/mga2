@@ -78,8 +78,7 @@ samples <- read_csv(
   samples_file,
   col_types = cols_only(
     id = col_factor(),
-    name = col_character(),
-    fastq = col_character(),
+    user_id = col_character(),
     species = col_character(),
     controls = col_character(),
     genomes = col_character(),
@@ -141,7 +140,7 @@ control_genomes <- mutate(control_genomes, control = TRUE)
 
 
 # extracts from samples table used in join operations later
-sample_names <- select(samples, id, name)
+sample_user_ids <- select(samples, id, user_id)
 sampled_counts <- select(samples, id, total = sampled)
 
 
@@ -177,11 +176,11 @@ adapter_counts <- alignments %>%
   mutate(percentage = ifelse(total == 0, 0.0, round(100 * count / total, digits = 1))) %>%
   select(id, count, percentage)
 
-# substitute id with sample name and write alignments
+# substitute id with user id and write alignments
 alignments %>%
-  left_join(sample_names, by = "id") %>%
-  mutate(id = name) %>%
-  select(-name) %>%
+  left_join(sample_user_ids, by = "id") %>%
+  mutate(id = user_id) %>%
+  select(-user_id) %>%
   write_tsv(output_adapter_alignments_file, na = "")
 
 
@@ -309,10 +308,10 @@ assigned_summary <- alignments %>%
 # write best alignments for each read
 alignments %>%
   mutate(across(where(is.logical), ~ ifelse(.x, "yes", "no"))) %>%
-  left_join(sample_names, by = "id") %>%
+  left_join(sample_user_ids, by = "id") %>%
   arrange(id, read, genome) %>%
   select(
-    id = name,
+    id = user_id,
     read,
     genome,
     chromosome,
@@ -340,7 +339,6 @@ message("Writing summary tables")
 
 # general summary with one row per sample/dataset
 samples %>%
-  select(-fastq) %>%
   left_join(expected_summary, by = "id") %>%
   rename(
     `genome aligned` = count,
@@ -357,13 +355,13 @@ samples %>%
   rename(unmapped = count, `unmapped %` = percentage) %>%
   left_join(adapter_counts, by = "id") %>%
   rename(`adapter` = count, `adapter %` = percentage) %>%
-  mutate(id = name) %>%
-  select(-name) %>%
+  mutate(id = user_id) %>%
+  select(-user_id) %>%
   rename(`control genomes` = control_genomes) %>%
   write_csv(output_summary_file, na = "")
 
 # genome alignment summary
-alignment_summary <- sample_names %>%
+alignment_summary <- sample_user_ids %>%
   left_join(aligned_summary, by = "id", multiple = "all") %>%
   rename(
     aligned = count,
@@ -381,14 +379,14 @@ alignment_summary <- sample_names %>%
   mutate(expected = replace_na(expected, FALSE)) %>%
   left_join(control_genomes, by = c("id", "genome")) %>%
   mutate(control = replace_na(control, FALSE)) %>%
-  select(id, name, genome, species, expected, control, everything())
+  select(id, user_id, genome, species, expected, control, everything())
 
-unmapped_rows <- sample_names %>%
+unmapped_rows <- sample_user_ids %>%
   left_join(unmapped_summary, by = "id") %>%
   mutate(genome = "unmapped") %>%
   select(
     id,
-    name,
+    user_id,
     genome,
     aligned = count,
     `aligned %` = percentage,
@@ -401,7 +399,7 @@ alignment_summary <- alignment_summary %>%
   arrange(id, is.na(expected), desc(assigned))
 
 alignment_summary %>%
-  mutate(id = name) %>%
-  select(-name) %>%
+  mutate(id = user_id) %>%
+  select(-user_id) %>%
   mutate(across(where(is.logical), ~ ifelse(.x, "yes", "no"))) %>%
   write_csv(output_alignment_summary_file, na = "")
