@@ -3,7 +3,9 @@
 // enable DSL 2 syntax
 nextflow.enable.dsl = 2
 
-include { check_inputs; sample_fastq; trim_and_split; bowtie; split_genome_alignments_by_sample; exonerate; split_adapter_alignments_by_sample; summarize_alignments; compress_alignments; create_bar_chart } from "./processes"
+// include processes and sub-workflow modules
+include { add_sample_ids } from "./processes"
+include { mga2 } from "./workflow"
 
 
 // -----------------------------------------------------------------------------
@@ -50,118 +52,35 @@ if (params.trimLength < 30) {
 }
 
 
+
+
 // -----------------------------------------------------------------------------
 // workflow
 // -----------------------------------------------------------------------------
 
 workflow {
+    // add sample ids to the sample sheet
     sample_sheet = channel.fromPath(params.sampleSheet, checkIfExists: true)
-    genome_details = channel.fromPath(params.genomeDetails, checkIfExists: true)
-    bowtie_index_dir = channel.fromPath(params.bowtieIndexDir, checkIfExists: true)
-    adapters_fasta = channel.fromPath(params.adaptersFasta, checkIfExists: true)
+        | add_sample_ids
 
-    genomes = channel
-        .fromPath("${params.bowtieIndexDir}/*.rev.1.ebwt{,l}", checkIfExists: true)
-        .map { "${it.name}".replaceFirst(/.rev.1.ebwtl?$/, "") }
+    // obtain FASTQ file name/pattern from the sample sheet
+    samples = sample_sheet.splitCsv(header: true, strip: true, quote: '"')
 
-    bowtie_index_list = genomes.collectFile(name: "bowtie_index_list.txt", newLine: true)
+    // check for missing fastq column or missing values within the fastq column
+    samples.subscribe { row -> assert row.fastq != null && !row.fastq.isEmpty(), "Missing fastq column or values in sample sheet" }
 
-    check_inputs(
-        sample_sheet,
-        genome_details,
-        bowtie_index_list
-    )
+    // convert FASTQ file name/pattern to file(s)
+    sample_fastq_files = samples.map { row -> tuple("${row.id}", file("${fastqDir}${row.fastq}", checkIfExists: true), "${fastqDir}${row.fastq}") }
 
-    fastq = check_inputs.out.samples
-        .splitCsv(header: true, quote: '"')
-        .map { row -> tuple("${row.id}", "${row.name}", file("${fastqDir}${row.fastq}", checkIfExists: true), "${fastqDir}${row.fastq}") }
+    // check that there were matches for the specified FASTQ file name/pattern
+    sample_fastq_files.subscribe { assert !it[1].isEmpty(), "No FASTQ files found for ${it[0]} matching pattern ${it[2]}" }
 
-    fastq.subscribe { assert !it[2].isEmpty(), "No FASTQ files found for ${it[1]} matching pattern ${it[3]}" }
+    // fastq channel expected to contain tuples comprising the sample id and a
+    // collection of fastq files for each sample
+    fastq = sample_fastq_files.map { it[0..1] }
 
-    // calculate minimum sequence length used for sampling sequences
-    minimumSequenceLength = params.trimStart + params.trimLength - 1
-
-    sample_fastq(fastq.map { it[0..2] }, params.sampleSize, params.maxNumberToSampleFrom, minimumSequenceLength)
-
-    counts = sample_fastq.out.summary
-        .collectFile(name: "sampling_summary.csv", keepHeader: true)
-
-    trim_and_split(sample_fastq.out.fastq.collect(), params.chunkSize, params.trimStart, params.trimLength)
-
-    fasta = trim_and_split.out.fasta
-        .flatten()
-        .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
-
-    bowtie(
-        trim_and_split.out.fastq,
-        bowtie_index_dir,
-        genomes.collect()
-    )
-
-    chunk_genome_alignments = bowtie.out
-        .collectFile(keepHeader: true) { it -> [ "chunk.${it.name.split('\\.')[1]}.genome_alignments.tsv", it ] }
-        .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
-
-    sample_genome_alignments = split_genome_alignments_by_sample(chunk_genome_alignments.join(fasta))
-        .flatten()
-        .collectFile(keepHeader: true) { it -> [ "sample.${it.name.split('\\.')[1]}.genome_alignments.tsv", it ] }
-        .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
-
-    exonerate(
-        trim_and_split.out.fasta,
-        adapters_fasta
-    )
-
-    chunk_adapter_alignments = exonerate.out
-        .collectFile(keepHeader: true) { it -> [ "chunk.${it.name.split('\\.')[1]}.adapter_alignments.tsv", it ] }
-        .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
-
-    sample_adapter_alignments = split_adapter_alignments_by_sample(chunk_adapter_alignments.join(fasta))
-        .flatten()
-        .collectFile(keepHeader: true) { it -> [ "sample.${it.name.split('\\.')[1]}.adapter_alignments.tsv", it ] }
-        .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
-
-    sample_fastq.out.summary
-        .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
-        .join(sample_genome_alignments)
-        .join(sample_adapter_alignments)
-        .combine(check_inputs.out.samples)
-        .combine(check_inputs.out.genomes)
-        | summarize_alignments
-
-    summary = summarize_alignments.out.summary
-        .collectFile(
-            name: "${params.outputPrefix}summary.csv",
-            storeDir: "${params.outputDir}",
-            keepHeader: true,
-            sort: { it.name.split("\\.")[1].toInteger() }
-        )
-
-    alignment_summary = summarize_alignments.out.alignment_summary
-        .collectFile(
-            name: "${params.outputPrefix}alignment_summary.csv",
-            storeDir: "${params.outputDir}",
-            keepHeader: true,
-            sort: { it.name.split("\\.")[1].toInteger() }
-        )
-
-    genome_alignments = summarize_alignments.out.genome_alignments
-        .collectFile(
-            name: "${params.outputPrefix}genome_alignments.tsv",
-            keepHeader: true,
-            sort: { it.name.split("\\.")[1].toInteger() }
-        )
-
-    adapter_alignments = summarize_alignments.out.adapter_alignments
-        .collectFile(
-            name: "${params.outputPrefix}adapter_alignments.tsv",
-            keepHeader: true,
-            sort: { it.name.split("\\.")[1].toInteger() }
-        )
-
-    compress_alignments(genome_alignments, adapter_alignments, params.outputDir)
-
-    create_bar_chart(summary, alignment_summary, params.outputDir, params.outputPrefix)
+    // core workflow
+    mga2(sample_sheet, fastq)
 }
 
 
