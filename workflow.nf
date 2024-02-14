@@ -134,8 +134,8 @@ workflow mga2 {
         create_bar_chart(summary, alignment_summary, params.outputDir, params.outputPrefix)
 
     emit:
-        summary
-        alignment_summary
+        summary = summary
+        alignment_summary = alignment_summary
 }
 
 
