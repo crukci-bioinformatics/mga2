@@ -1,6 +1,18 @@
 # mga2
 
-## [2.0.5](https://github.com/crukci-bioinformatics/mga2/releases/tag/2.0.4) (2022-08-07)
+## [2.0.6](https://github.com/crukci-bioinformatics/mga2/releases/tag/2.0.6) (2024-02-15)
+
+* Created inner workflow containing much of the workflow logic and that can be incorporated as a sub-workflow within another data processing pipeline that already has a channel for FASTQ files and sample metadata stored in another format; updated main workflow by removing the logic and calling the inner workflow instead
+
+* Moved the process definitions from mga2.nf to a separate file, processes.nf
+
+* New add_sample_ids process for adding a numeric id to the sample sheet which is used instead of the user-specified id within the workflow logic
+
+* added checks for missing bowtie index for matched genomes in check_inputs process
+
+* Updated Docker container with more recent versions of Rust, R and dependent R packages; use of separate build directory to avoid R scripts in the container taking precedence on the path over the versions in the bin directory
+
+## [2.0.5](https://github.com/crukci-bioinformatics/mga2/releases/tag/2.0.5) (2023-08-07)
 
 * Reworked alignment summarization R script so that this is done for each sample separately (more efficient for large numbers of samples), new processs added for splitting and collating chunked alignment output files
 
