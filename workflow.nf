@@ -48,10 +48,16 @@ workflow mga2 {
             bowtie_index_list
         )
 
+        // join sample user id to fastq files
+        fastq_with_user_id = check_inputs.out.samples
+            .splitCsv(header: true, strip: true, quote: '"')
+            .map { row -> tuple(row.id, row.user_id) }
+            .join(fastq)
+
         // calculate minimum sequence length used for sampling sequences
         minimumSequenceLength = params.trimStart + params.trimLength - 1
 
-        sample_fastq(fastq, params.sampleSize, params.maxNumberToSampleFrom, minimumSequenceLength)
+        sample_fastq(fastq_with_user_id, params.sampleSize, params.maxNumberToSampleFrom, minimumSequenceLength)
 
         counts = sample_fastq.out.summary
             .collectFile(name: "sampling_summary.csv", keepHeader: true)

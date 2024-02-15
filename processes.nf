@@ -56,12 +56,12 @@ process check_inputs {
 // sample records from input FASTQ file(s)
 process sample_fastq {
     label 'mga2'
-    tag "${id}"
+    tag "${id} ${user_id}"
 
     time 12.hour
 
     input:
-        tuple val(id), path(fastq)
+        tuple val(id), val(user_id), path(fastq)
         val sampleSize
         val maxNumberToSampleFrom
         val minimumSequenceLength
