@@ -49,10 +49,13 @@ workflow mga2 {
         )
 
         // join sample user id to fastq files
+        // note that the id from reading the sample sheet using splitCsv is a
+        // character string so need to ensure that the id in the fastq channel
+        // is also a string, not an integer
         fastq_with_user_id = check_inputs.out.samples
             .splitCsv(header: true, strip: true, quote: '"')
             .map { row -> tuple(row.id, row.user_id) }
-            .join(fastq)
+            .join(fastq.map { id, fastq -> tuple("${id}", fastq) })
 
         // calculate minimum sequence length used for sampling sequences
         minimumSequenceLength = params.trimStart + params.trimLength - 1
