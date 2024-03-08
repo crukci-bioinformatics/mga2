@@ -83,7 +83,7 @@ workflow mga2 {
 
         sample_genome_alignments = split_genome_alignments_by_sample(chunk_genome_alignments.join(fasta))
             .flatten()
-            .collectFile(keepHeader: true) { it -> [ "sample.${it.name.split('\\.')[1]}.genome_alignments.tsv", it ] }
+            .collectFile(keepHeader: true) { it -> [ "sample.${it.name.split('\\.')[1]}.collected_genome_alignments.tsv", it ] }
             .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
 
         exonerate(
@@ -97,7 +97,7 @@ workflow mga2 {
 
         sample_adapter_alignments = split_adapter_alignments_by_sample(chunk_adapter_alignments.join(fasta))
             .flatten()
-            .collectFile(keepHeader: true) { it -> [ "sample.${it.name.split('\\.')[1]}.adapter_alignments.tsv", it ] }
+            .collectFile(keepHeader: true) { it -> [ "sample.${it.name.split('\\.')[1]}.collected_adapter_alignments.tsv", it ] }
             .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
 
         sample_fastq.out.summary
