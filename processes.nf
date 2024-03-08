@@ -277,7 +277,7 @@ process summarize_alignments {
 process compress_alignments {
     label 'mga2'
 
-    publishDir "${outputDir}", mode: 'move'
+    publishDir "${outputDir}", mode: 'copy'
 
     input:
         path genome_alignments
@@ -302,7 +302,7 @@ process compress_alignments {
 process create_bar_chart {
     label 'mga2'
 
-    publishDir "${outputDir}", mode: 'move'
+    publishDir "${outputDir}", mode: 'copy'
 
     input:
         path summary
