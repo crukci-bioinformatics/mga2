@@ -36,11 +36,11 @@ workflow mga2 {
         bowtie_index_dir = channel.fromPath(params.bowtieIndexDir, checkIfExists: true)
         adapters_fasta = channel.fromPath(params.adaptersFasta, checkIfExists: true)
 
-        genomes = channel
+        bowtie_indexes = channel
             .fromPath("${params.bowtieIndexDir}/*.rev.1.ebwt{,l}", checkIfExists: true)
             .map { "${it.name}".replaceFirst(/.rev.1.ebwtl?$/, "") }
 
-        bowtie_index_list = genomes.collectFile(name: "bowtie_index_list.txt", newLine: true)
+        bowtie_index_list = bowtie_indexes.collectFile(name: "bowtie_index_list.txt", newLine: true)
 
         check_inputs(
             sample_sheet,
@@ -48,11 +48,14 @@ workflow mga2 {
             bowtie_index_list
         )
 
+        samples = check_inputs.out.samples
+        genomes = check_inputs.out.genomes
+
         // join sample user id to fastq files
         // note that the id from reading the sample sheet using splitCsv is a
         // character string so need to ensure that the id in the fastq channel
         // is also a string, not an integer
-        fastq_with_user_id = check_inputs.out.samples
+        fastq_with_user_id = samples
             .splitCsv(header: true, strip: true, quote: '"')
             .map { row -> tuple(row.id, row.user_id) }
             .join(fastq.map { id, fastq -> tuple("${id}", fastq) })
@@ -74,14 +77,14 @@ workflow mga2 {
         bowtie(
             trim_and_split.out.fastq,
             bowtie_index_dir,
-            genomes.collect()
+            bowtie_indexes.collect()
         )
 
         chunk_genome_alignments = bowtie.out
             .collectFile(keepHeader: true) { it -> [ "chunk.${it.name.split('\\.')[1]}.genome_alignments.tsv", it ] }
             .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
 
-        sample_genome_alignments = split_genome_alignments_by_sample(chunk_genome_alignments.join(fasta))
+        sample_genome_alignments = split_genome_alignments_by_sample(chunk_genome_alignments.combine(samples))
             .flatten()
             .collectFile(keepHeader: true) { it -> [ "sample.${it.name.split('\\.')[1]}.collected_genome_alignments.tsv", it ] }
             .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
@@ -95,7 +98,7 @@ workflow mga2 {
             .collectFile(keepHeader: true) { it -> [ "chunk.${it.name.split('\\.')[1]}.adapter_alignments.tsv", it ] }
             .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
 
-        sample_adapter_alignments = split_adapter_alignments_by_sample(chunk_adapter_alignments.join(fasta))
+        sample_adapter_alignments = split_adapter_alignments_by_sample(chunk_adapter_alignments.combine(samples))
             .flatten()
             .collectFile(keepHeader: true) { it -> [ "sample.${it.name.split('\\.')[1]}.collected_adapter_alignments.tsv", it ] }
             .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
@@ -104,8 +107,8 @@ workflow mga2 {
             .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
             .join(sample_genome_alignments)
             .join(sample_adapter_alignments)
-            .combine(check_inputs.out.samples)
-            .combine(check_inputs.out.genomes)
+            .combine(samples)
+            .combine(genomes)
             | summarize_alignments
 
         summary = summarize_alignments.out.summary

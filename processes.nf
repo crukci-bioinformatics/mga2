@@ -162,7 +162,7 @@ process split_genome_alignments_by_sample {
     memory 2.GB
 
     input:
-        tuple val(chunk), path(alignments), path(fasta)
+        tuple val(chunk), path(alignments), path(samples)
 
     output:
         path "sample.*.genome_alignments.tsv"
@@ -171,7 +171,7 @@ process split_genome_alignments_by_sample {
         """
         split_alignments_by_sample.R \
             --alignments=${alignments} \
-            --fasta=${fasta} \
+            --samples=${samples} \
             --output-prefix="sample" \
             --output-suffix="genome_alignments.tsv"
         """
@@ -224,7 +224,7 @@ process split_adapter_alignments_by_sample {
     memory 2.GB
 
     input:
-        tuple val(chunk), path(alignments), path(fasta)
+        tuple val(chunk), path(alignments), path(samples)
 
     output:
         path "sample.*.adapter_alignments.tsv"
@@ -233,7 +233,7 @@ process split_adapter_alignments_by_sample {
         """
         split_alignments_by_sample.R \
             --alignments=${alignments} \
-            --fasta=${fasta} \
+            --samples=${samples} \
             --output-prefix="sample" \
             --output-suffix="adapter_alignments.tsv"
         """
