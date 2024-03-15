@@ -4,7 +4,7 @@
 
 * Fixed issue with summarize_alignments, compress_alignments and create_bar_chart tasks being re-run when resuming from successfully completed run.
 
-* Fixed error running split_alignments_by_sample.R when an input dataset has no sampled reads, either because the input data has no reads of the sampling returns no reads due to filtering based on trimming; now uses the sample sheet to know what samples are present and creates an output file for each regardless of whether that sample was contained in the chunk..
+* Fixed error running split_alignments_by_sample.R when an input dataset has no sampled reads, either because the input data has no reads of the sampling returns no reads due to filtering based on trimming; now uses the sample sheet to know what samples are present and creates an output file for each regardless of whether that sample was contained in the chunk.
 
 ## [2.0.6](https://github.com/crukci-bioinformatics/mga2/releases/tag/2.0.6) (2024-02-15)
 
