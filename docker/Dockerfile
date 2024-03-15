@@ -1,7 +1,7 @@
 FROM debian:11.6-slim
 
 LABEL authors="Matt Eldridge" \
-      version="2.1.0-snapshot" \
+      version="2.0.7" \
       description="Multi-Genome Analysis (MGA) contaminant screen for genomic sequence data"
 
 RUN apt-get update && \
@@ -27,7 +27,7 @@ ENV PATH /opt/mga2/bin:/opt/conda/envs/mga2/bin:$PATH
 # ensures that a new build is run if commits have been made since the last build
 ADD "https://api.github.com/repos/crukci-bioinformatics/mga2/commits?per_page=1" /opt/.latest_mga_commit
 
-ARG VERSION=master
+ARG VERSION=2.0.7
 
 RUN git clone --branch ${VERSION} --depth 1 https://github.com/crukci-bioinformatics/mga2 /opt/mga2/src && \
     cargo install --path /opt/mga2/src --root /opt/mga2
