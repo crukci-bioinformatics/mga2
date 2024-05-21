@@ -122,7 +122,7 @@ process bowtie {
     label 'mga2'
     tag "${prefix}.${genome}"
 
-    memory { 4.GB * 2 ** (task.attempt - 1) }
+    memory { 8.GB * task.attempt }
     time { 2.hour * 2 ** (task.attempt - 1) }
     maxRetries 2
 
