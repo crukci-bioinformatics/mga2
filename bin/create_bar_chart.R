@@ -151,13 +151,13 @@ width <- 10
 height <- 0.7 * (1.5 + nrow(sample_ids))
 
 if (!is.null(output_pdf_file)) {
-  ggsave(output_pdf_file, plot, width = width, height = height)
+  ggsave(output_pdf_file, plot, width = width, height = height, limitsize = FALSE)
 }
 
 if (!is.null(output_png_file)) {
-  ggsave(output_png_file, plot, width = width, height = height)
+  ggsave(output_png_file, plot, width = width, height = height, limitsize = FALSE)
 }
 
 if (!is.null(output_svg_file)) {
-  ggsave(output_svg_file, plot, width = width, height = height)
+  ggsave(output_svg_file, plot, width = width, height = height, limitsize = FALSE)
 }
