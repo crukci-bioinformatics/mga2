@@ -14,6 +14,8 @@
 
 * Raised the minimum required Nextflow version to 25.10.0 (the strict syntax parser became the default in Nextflow 26.04.0)
 
+* The Docker/Singularity container tag is now derived from the pipeline version: snapshot/development versions use the `latest` container while tagged releases use the matching version tag, ensuring reproducibility without a separate manual step at release time
+
 ## [2.0.7](https://github.com/crukci-bioinformatics/mga2/releases/tag/2.0.7) (2024-03-15)
 
 * Fixed issue with summarize_alignments, compress_alignments and create_bar_chart tasks being re-run when resuming from successfully completed run.
