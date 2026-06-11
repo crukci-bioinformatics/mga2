@@ -158,6 +158,7 @@ process bowtie {
 // split genome alignments into separate files based on the sample id column
 process split_genome_alignments_by_sample {
     label 'mga2'
+    tag "chunk ${chunk}"
 
     memory 2.GB
 
@@ -220,6 +221,7 @@ process exonerate {
 // split adapter alignments into separate files based on the sample id column
 process split_adapter_alignments_by_sample {
     label 'mga2'
+    tag "chunk ${chunk}"
 
     memory 2.GB
 
@@ -243,9 +245,10 @@ process split_adapter_alignments_by_sample {
 // summarize alignments
 process summarize_alignments {
     label 'mga2'
+    tag "sample ${id}"
 
     input:
-        tuple val(chunk), path(sampling_summary), path(genome_alignments), path(adapter_alignments), path(samples), path(genomes)
+        tuple val(id), path(sampling_summary), path(genome_alignments), path(adapter_alignments), path(samples), path(genomes)
 
     output:
         path summary, emit: summary
@@ -254,10 +257,10 @@ process summarize_alignments {
         path output_adapter_alignments, emit: adapter_alignments
 
     script:
-        summary = "sample.${chunk}.summary.csv"
-        alignment_summary = "sample.${chunk}.alignment_summary.csv"
-        output_genome_alignments = "sample.${chunk}.genome_alignments.tsv"
-        output_adapter_alignments = "sample.${chunk}.adapter_alignments.tsv"
+        summary = "sample.${id}.summary.csv"
+        alignment_summary = "sample.${id}.alignment_summary.csv"
+        output_genome_alignments = "sample.${id}.genome_alignments.tsv"
+        output_adapter_alignments = "sample.${id}.adapter_alignments.tsv"
         """
         summarize_alignments.R \
             --samples=${samples} \
