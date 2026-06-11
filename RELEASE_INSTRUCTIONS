@@ -3,7 +3,7 @@
 
 - update versions
   - Dockerfile - in two places: LABEL version and ARG VERSION
-  - nextflow.config - manifest section and container tag
+  - nextflow.config - manifest section
   - Cargo.toml
   - README.md - examples of nextflow run and pull using the -r option
   - RELEASE_INSTRUCTIONS - this file
@@ -21,6 +21,5 @@ make release version=2.0.7
 
 - update versions to, e.g., 2.1.0-snapshot in same files as above
   - Dockerfile - set ARG VERSION=master
-  - nextflow.config - set container tag to latest
   - Cargo.toml
 
