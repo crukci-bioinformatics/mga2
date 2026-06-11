@@ -38,7 +38,7 @@ workflow mga2 {
 
         bowtie_indexes = channel
             .fromPath("${params.bowtieIndexDir}/*.rev.1.ebwt{,l}", checkIfExists: true)
-            .map { "${it.name}".replaceFirst(/.rev.1.ebwtl?$/, "") }
+            .map { index -> "${index.name}".replaceFirst(/.rev.1.ebwtl?$/, "") }
 
         bowtie_index_list = bowtie_indexes.collectFile(name: "bowtie_index_list.txt", newLine: true)
 
@@ -58,21 +58,14 @@ workflow mga2 {
         fastq_with_user_id = samples
             .splitCsv(header: true, strip: true, quote: '"')
             .map { row -> tuple(row.id, row.user_id) }
-            .join(fastq.map { id, fastq -> tuple("${id}", fastq) })
+            .join(fastq.map { id, fq -> tuple("${id}", fq) })
 
         // calculate minimum sequence length used for sampling sequences
         minimumSequenceLength = params.trimStart + params.trimLength - 1
 
         sample_fastq(fastq_with_user_id, params.sampleSize, params.maxNumberToSampleFrom, minimumSequenceLength)
 
-        counts = sample_fastq.out.summary
-            .collectFile(name: "sampling_summary.csv", keepHeader: true)
-
         trim_and_split(sample_fastq.out.fastq.collect(), params.chunkSize, params.trimStart, params.trimLength)
-
-        fasta = trim_and_split.out.fasta
-            .flatten()
-            .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
 
         bowtie(
             trim_and_split.out.fastq,
@@ -81,13 +74,13 @@ workflow mga2 {
         )
 
         chunk_genome_alignments = bowtie.out
-            .collectFile(keepHeader: true) { it -> [ "chunk.${it.name.split('\\.')[1]}.genome_alignments.tsv", it ] }
-            .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
+            .collectFile(keepHeader: true) { item -> [ "chunk.${item.name.split('\\.')[1]}.genome_alignments.tsv", item ] }
+            .map { item -> tuple(item.name.split("\\.")[1].toInteger(), item) }
 
         sample_genome_alignments = split_genome_alignments_by_sample(chunk_genome_alignments.combine(samples))
             .flatten()
-            .collectFile(keepHeader: true) { it -> [ "sample.${it.name.split('\\.')[1]}.collected_genome_alignments.tsv", it ] }
-            .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
+            .collectFile(keepHeader: true) { item -> [ "sample.${item.name.split('\\.')[1]}.collected_genome_alignments.tsv", item ] }
+            .map { item -> tuple(item.name.split("\\.")[1].toInteger(), item) }
 
         exonerate(
             trim_and_split.out.fasta,
@@ -95,16 +88,16 @@ workflow mga2 {
         )
 
         chunk_adapter_alignments = exonerate.out
-            .collectFile(keepHeader: true) { it -> [ "chunk.${it.name.split('\\.')[1]}.adapter_alignments.tsv", it ] }
-            .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
+            .collectFile(keepHeader: true) { item -> [ "chunk.${item.name.split('\\.')[1]}.adapter_alignments.tsv", item ] }
+            .map { item -> tuple(item.name.split("\\.")[1].toInteger(), item) }
 
         sample_adapter_alignments = split_adapter_alignments_by_sample(chunk_adapter_alignments.combine(samples))
             .flatten()
-            .collectFile(keepHeader: true) { it -> [ "sample.${it.name.split('\\.')[1]}.collected_adapter_alignments.tsv", it ] }
-            .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
+            .collectFile(keepHeader: true) { item -> [ "sample.${item.name.split('\\.')[1]}.collected_adapter_alignments.tsv", item ] }
+            .map { item -> tuple(item.name.split("\\.")[1].toInteger(), item) }
 
         sample_fastq.out.summary
-            .map { it -> tuple(it.name.split("\\.")[1].toInteger(), it) }
+            .map { item -> tuple(item.name.split("\\.")[1].toInteger(), item) }
             .join(sample_genome_alignments)
             .join(sample_adapter_alignments)
             .combine(samples)
@@ -116,7 +109,7 @@ workflow mga2 {
                 name: "${params.outputPrefix}summary.csv",
                 storeDir: "${params.outputDir}",
                 keepHeader: true,
-                sort: { it.name.split("\\.")[1].toInteger() }
+                sort: { item -> item.name.split("\\.")[1].toInteger() }
             )
 
         alignment_summary = summarize_alignments.out.alignment_summary
@@ -124,21 +117,21 @@ workflow mga2 {
                 name: "${params.outputPrefix}alignment_summary.csv",
                 storeDir: "${params.outputDir}",
                 keepHeader: true,
-                sort: { it.name.split("\\.")[1].toInteger() }
+                sort: { item -> item.name.split("\\.")[1].toInteger() }
             )
 
         genome_alignments = summarize_alignments.out.genome_alignments
             .collectFile(
                 name: "${params.outputPrefix}genome_alignments.tsv",
                 keepHeader: true,
-                sort: { it.name.split("\\.")[1].toInteger() }
+                sort: { item -> item.name.split("\\.")[1].toInteger() }
             )
 
         adapter_alignments = summarize_alignments.out.adapter_alignments
             .collectFile(
                 name: "${params.outputPrefix}adapter_alignments.tsv",
                 keepHeader: true,
-                sort: { it.name.split("\\.")[1].toInteger() }
+                sort: { item -> item.name.split("\\.")[1].toInteger() }
             )
 
         compress_alignments(genome_alignments, adapter_alignments, params.outputDir)
