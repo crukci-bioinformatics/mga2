@@ -1,5 +1,19 @@
 # mga2
 
+## 2.1.0 (in development)
+
+* Updated the workflow to conform to the strict Nextflow DSL2 syntax enforced by recent Nextflow releases:
+    - moved top-level parameter validation and the help/settings handling into the entry workflow (statements are no longer permitted outside of processes, workflows and functions)
+    - replaced `exit` statements with `error` for failed validation and an early `return` for the help message
+    - replaced the `assert ..., "message"` sample sheet checks with explicit `if (...) error "message"` blocks
+    - wrapped the `publishDir` directives that reference a task input in a closure so the value is evaluated lazily rather than at process definition time
+    - declared explicit closure parameters in place of the deprecated implicit `it` variable
+    - renamed a closure parameter that shadowed the `fastq` workflow input and removed unused channel variables
+    - replaced `file()` with `files()` where a glob pattern may match multiple FASTQ files
+    - switched long-form duration units (`hour`, `sec`) to their short forms (`h`, `s`) and expanded a range used with `flatten()` in the `errorStrategy` setting
+
+* Raised the minimum required Nextflow version to 25.10.0 (the strict syntax parser became the default in Nextflow 26.04.0)
+
 ## [2.0.7](https://github.com/crukci-bioinformatics/mga2/releases/tag/2.0.7) (2024-03-15)
 
 * Fixed issue with summarize_alignments, compress_alignments and create_bar_chart tasks being re-run when resuming from successfully completed run.
