@@ -1,57 +1,8 @@
 #!/usr/bin/env nextflow
 
-// enable DSL 2 syntax
-nextflow.enable.dsl = 2
-
 // include processes and sub-workflow modules
 include { add_sample_ids } from "./processes"
 include { mga2 } from "./workflow"
-
-
-// -----------------------------------------------------------------------------
-// show settings and/or help
-// -----------------------------------------------------------------------------
-
-if (params.showSettings) {
-    printParameterSummary()
-}
-
-if (params.help) {
-    helpMessage()
-    exit 0
-}
-
-
-// -----------------------------------------------------------------------------
-// check/derive parameters
-// -----------------------------------------------------------------------------
-
-fastqDir = params.fastqDir
-if (fastqDir && !fastqDir.endsWith("/")) {
-    fastqDir = "${params.fastqDir}/"
-}
-
-if (params.sampleSize < 1000) {
-    exit 1, "Invalid sample size - set to at least 1000 (100000 recommended)"
-}
-
-if (params.maxNumberToSampleFrom < params.sampleSize) {
-    exit 1, "Invalid maximum number of sequence reads to sample from - must be at least as large as the sample size"
-}
-
-if (params.chunkSize < 100000) {
-    exit 1, "Invalid chunk size for batch alignment - set to at least 100000 (1000000 recommended)"
-}
-
-if (params.trimStart <= 0) {
-    exit 1, "Invalid trim start - must be a positive integer value"
-}
-
-if (params.trimLength < 30) {
-    exit 1, "Invalid trim length - trimmed sequences should be sufficiently long to align to reference genomes, i.e. at least 30"
-}
-
-
 
 
 // -----------------------------------------------------------------------------
@@ -59,6 +10,43 @@ if (params.trimLength < 30) {
 // -----------------------------------------------------------------------------
 
 workflow {
+    // show help message and exit if requested
+    if (params.help) {
+        helpMessage()
+        return
+    }
+
+    // show settings
+    if (params.showSettings) {
+        printParameterSummary()
+    }
+
+    // check/derive parameters
+    def fastqDir = params.fastqDir
+    if (fastqDir && !fastqDir.endsWith("/")) {
+        fastqDir = "${params.fastqDir}/"
+    }
+
+    if (params.sampleSize < 1000) {
+        error "Invalid sample size - set to at least 1000 (100000 recommended)"
+    }
+
+    if (params.maxNumberToSampleFrom < params.sampleSize) {
+        error "Invalid maximum number of sequence reads to sample from - must be at least as large as the sample size"
+    }
+
+    if (params.chunkSize < 100000) {
+        error "Invalid chunk size for batch alignment - set to at least 100000 (1000000 recommended)"
+    }
+
+    if (params.trimStart <= 0) {
+        error "Invalid trim start - must be a positive integer value"
+    }
+
+    if (params.trimLength < 30) {
+        error "Invalid trim length - trimmed sequences should be sufficiently long to align to reference genomes, i.e. at least 30"
+    }
+
     // add sample ids to the sample sheet
     sample_sheet = channel.fromPath(params.sampleSheet, checkIfExists: true)
         | add_sample_ids
@@ -67,17 +55,25 @@ workflow {
     samples = sample_sheet.splitCsv(header: true, strip: true, quote: '"')
 
     // check for missing fastq column or missing values within the fastq column
-    samples.subscribe { row -> assert row.fastq != null && !row.fastq.isEmpty(), "Missing fastq column or values in sample sheet" }
+    samples.subscribe { row ->
+        if (row.fastq == null || row.fastq.isEmpty()) {
+            error "Missing fastq column or values in sample sheet"
+        }
+    }
 
     // convert FASTQ file name/pattern to file(s)
-    sample_fastq_files = samples.map { row -> tuple("${row.id}", file("${fastqDir}${row.fastq}", checkIfExists: true), "${fastqDir}${row.fastq}") }
+    sample_fastq_files = samples.map { row -> tuple("${row.id}", files("${fastqDir}${row.fastq}", checkIfExists: true), "${fastqDir}${row.fastq}") }
 
     // check that there were matches for the specified FASTQ file name/pattern
-    sample_fastq_files.subscribe { assert !it[1].isEmpty(), "No FASTQ files found for ${it[0]} matching pattern ${it[2]}" }
+    sample_fastq_files.subscribe { row ->
+        if (row[1].isEmpty()) {
+            error "No FASTQ files found for ${row[0]} matching pattern ${row[2]}"
+        }
+    }
 
     // fastq channel expected to contain tuples comprising the sample id and a
     // collection of fastq files for each sample
-    fastq = sample_fastq_files.map { it[0..1] }
+    fastq = sample_fastq_files.map { row -> row[0..1] }
 
     // core workflow
     mga2(sample_sheet, fastq)
