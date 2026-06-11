@@ -58,7 +58,7 @@ process sample_fastq {
     label 'mga2'
     tag "${id} ${user_id}"
 
-    time 12.hour
+    time 12.h
 
     input:
         tuple val(id), val(user_id), path(fastq)
@@ -123,7 +123,7 @@ process bowtie {
     tag "${prefix}.${genome}"
 
     memory { 8.GB * task.attempt }
-    time { 2.hour * 2 ** (task.attempt - 1) }
+    time { 2.h * 2 ** (task.attempt - 1) }
     maxRetries 2
 
     input:
@@ -184,7 +184,7 @@ process exonerate {
     tag "${prefix}.adapters"
 
     memory { 2.GB * task.attempt }
-    time { 1.hour * task.attempt }
+    time { 1.h * task.attempt }
     maxRetries 2
 
     input:
@@ -277,7 +277,7 @@ process summarize_alignments {
 process compress_alignments {
     label 'mga2'
 
-    publishDir "${outputDir}", mode: 'copy'
+    publishDir path: { outputDir }, mode: 'copy'
 
     input:
         path genome_alignments
@@ -302,7 +302,7 @@ process compress_alignments {
 process create_bar_chart {
     label 'mga2'
 
-    publishDir "${outputDir}", mode: 'copy'
+    publishDir path: { outputDir }, mode: 'copy'
 
     input:
         path summary
