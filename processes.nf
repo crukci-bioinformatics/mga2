@@ -21,7 +21,7 @@ process add_sample_ids {
         """
         add_sample_ids.R \
             --samples=${samples} \
-            --output-samples=${samples_with_ids} \
+            --output-samples=${samples_with_ids}
         """
 }
 
@@ -325,7 +325,7 @@ process create_bar_chart {
             --alignment-summary=${alignment_summary} \
             --output-pdf="${pdf}" \
             --output-png="${png}" \
-            --output-svg="${svg}" \
+            --output-svg="${svg}"
         """
 }
 
