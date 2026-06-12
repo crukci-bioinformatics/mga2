@@ -11,3 +11,9 @@ Cargo.lock
 
 .vscode
 
+# Nextflow working files and test output
+.nextflow
+.nextflow.log*
+work/
+test_output/
+
