@@ -23,6 +23,12 @@ process add_sample_ids {
             --samples=${samples} \
             --output-samples=${samples_with_ids}
         """
+
+    stub:
+        samples_with_ids = "samples.ids.csv"
+        """
+        awk -F ',' 'NR == 1 { print "id,user_id,fastq,species,controls"; next } { print (NR - 1)","\$0 }' ${samples} > ${samples_with_ids}
+        """
 }
 
 // check input sample sheet and details of genomes to be screened
@@ -50,6 +56,14 @@ process check_inputs {
             --bowtie-indexes=${bowtie_index_list} \
             --output-samples=${checked_samples} \
             --output-genomes=${checked_genomes}
+        """
+
+    stub:
+        checked_samples = "samples.checked.csv"
+        checked_genomes = "genomes.checked.csv"
+        """
+        cp ${samples} ${checked_samples}
+        cp ${genome_details} ${checked_genomes}
         """
 }
 
@@ -86,6 +100,14 @@ process sample_fastq {
             --check-unique-record-ids \
             ${fastq}
         """
+
+    stub:
+        sampled_fastq = "sample.${id}.fq"
+        summary = "sample.${id}.sampling_summary.csv"
+        """
+        touch ${sampled_fastq}
+        echo "id" > ${summary}
+        """
 }
 
 
@@ -113,6 +135,12 @@ process trim_and_split {
             --length=${trimLength} \
             --output-fasta \
             ${fastq}
+        """
+
+    stub:
+        """
+        touch chunk.1.fq chunk.1.fa
+        touch chunk.2.fq chunk.2.fa
         """
 }
 
@@ -152,6 +180,13 @@ process bowtie {
             >> ${alignments}
         fi
         """
+
+    stub:
+        prefix = fastq.baseName
+        alignments = "${prefix}.alignments.${genome}.tsv"
+        """
+        echo "id" > ${alignments}
+        """
 }
 
 
@@ -175,6 +210,14 @@ process split_genome_alignments_by_sample {
             --samples=${samples} \
             --output-prefix="sample" \
             --output-suffix="genome_alignments.tsv"
+        """
+
+    stub:
+        """
+        for id in \$(tail -n +2 ${samples} | cut -d ',' -f 1)
+        do
+            echo "id" > sample.\${id}.genome_alignments.tsv
+        done
         """
 }
 
@@ -215,6 +258,13 @@ process exonerate {
             >> ${alignments}
         fi
         """
+
+    stub:
+        prefix = fasta.baseName
+        alignments = "${prefix}.adapter_alignments.tsv"
+        """
+        echo "id" > ${alignments}
+        """
 }
 
 
@@ -238,6 +288,14 @@ process split_adapter_alignments_by_sample {
             --samples=${samples} \
             --output-prefix="sample" \
             --output-suffix="adapter_alignments.tsv"
+        """
+
+    stub:
+        """
+        for id in \$(tail -n +2 ${samples} | cut -d ',' -f 1)
+        do
+            echo "id" > sample.\${id}.adapter_alignments.tsv
+        done
         """
 }
 
@@ -273,6 +331,18 @@ process summarize_alignments {
             --output-genome-alignments=${output_genome_alignments} \
             --output-adapter-alignments=${output_adapter_alignments}
         """
+
+    stub:
+        summary = "sample.${id}.summary.csv"
+        alignment_summary = "sample.${id}.alignment_summary.csv"
+        output_genome_alignments = "sample.${id}.genome_alignments.tsv"
+        output_adapter_alignments = "sample.${id}.adapter_alignments.tsv"
+        """
+        echo "id" > ${summary}
+        echo "id" > ${alignment_summary}
+        echo "id" > ${output_genome_alignments}
+        echo "id" > ${output_adapter_alignments}
+        """
 }
 
 
@@ -292,6 +362,14 @@ process compress_alignments {
         path compressed_adapter_alignments
 
     script:
+        compressed_genome_alignments = "${genome_alignments}.gz"
+        compressed_adapter_alignments = "${adapter_alignments}.gz"
+        """
+        gzip -c ${genome_alignments} > ${compressed_genome_alignments}
+        gzip -c ${adapter_alignments} > ${compressed_adapter_alignments}
+        """
+
+    stub:
         compressed_genome_alignments = "${genome_alignments}.gz"
         compressed_adapter_alignments = "${adapter_alignments}.gz"
         """
@@ -329,6 +407,14 @@ process create_bar_chart {
             --output-pdf="${pdf}" \
             --output-png="${png}" \
             --output-svg="${svg}"
+        """
+
+    stub:
+        pdf = "${outputPrefix}alignment_summary.pdf"
+        png = "${outputPrefix}alignment_summary.png"
+        svg = "${outputPrefix}alignment_summary.svg"
+        """
+        touch ${pdf} ${png} ${svg}
         """
 }
 
