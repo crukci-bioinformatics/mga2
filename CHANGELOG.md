@@ -18,6 +18,8 @@
 
 * Added `resourceLimits` to each execution profile so that the memory and time requested by the retrying `bowtie` and `exonerate` tasks is capped at the limits of the execution environment rather than requesting more than is available (which would cause the task to stall on a local executor or be rejected by the cluster scheduler)
 
+* Added `stub` blocks to all processes so that the complete workflow can be exercised with `nextflow run ... -stub-run` in seconds without the container or the alignment/R tools, useful for quickly validating the workflow wiring and for continuous integration
+
 ## [2.0.7](https://github.com/crukci-bioinformatics/mga2/releases/tag/2.0.7) (2024-03-15)
 
 * Fixed issue with summarize_alignments, compress_alignments and create_bar_chart tasks being re-run when resuming from successfully completed run.
