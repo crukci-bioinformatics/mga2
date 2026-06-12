@@ -141,6 +141,7 @@ process trim_and_split {
         """
         touch chunk.1.fq chunk.1.fa
         touch chunk.2.fq chunk.2.fa
+        touch chunk.3.fq chunk.3.fa
         """
 }
 
