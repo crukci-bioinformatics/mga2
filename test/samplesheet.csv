@@ -1,0 +1,3 @@
+id,fastq,species,controls
+sampleA,fastq/sampleA.*.fq,human,phix
+sampleB,fastq/sampleB.r1.fq,mouse,
